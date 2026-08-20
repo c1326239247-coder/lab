@@ -1,0 +1,20 @@
+﻿# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+.venv/
+venv/
+
+# Embedded runtime (do not ship)
+python311_embed/
+
+# Tool caches
+.codegraph/
+
+# OS / editor
+Thumbs.db
+.DESKTOP/
+
+# Misc
+*.log
