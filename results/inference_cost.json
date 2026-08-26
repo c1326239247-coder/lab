@@ -1,0 +1,51 @@
+{
+  "device": {
+    "gpu": "NVIDIA GeForce RTX 5070 Ti",
+    "compute_capability": "12.0",
+    "vram_gb": 15.9,
+    "torch": "2.11.0+cu128",
+    "cuda": "12.8"
+  },
+  "variants": [
+    {
+      "latency_ms_mean": 122.9,
+      "latency_ms_median": 123.5,
+      "peak_mem_gb": 2.66,
+      "n_measured": 60,
+      "system": "text only (no visual pathway)",
+      "connector_params": 825507
+    },
+    {
+      "latency_ms_mean": 123.0,
+      "latency_ms_median": 123.0,
+      "peak_mem_gb": 2.66,
+      "n_measured": 60,
+      "system": "caption-style projection",
+      "connector_params": 6299648
+    },
+    {
+      "latency_ms_mean": 126.3,
+      "latency_ms_median": 126.2,
+      "peak_mem_gb": 2.66,
+      "n_measured": 60,
+      "system": "cache-bridging, full cache",
+      "connector_params": 825507
+    },
+    {
+      "latency_ms_mean": 125.9,
+      "latency_ms_median": 125.7,
+      "peak_mem_gb": 2.66,
+      "n_measured": 60,
+      "system": "cache-bridging, 50% top-K",
+      "connector_params": 825507
+    },
+    {
+      "latency_ms_mean": 127.1,
+      "latency_ms_median": 126.8,
+      "peak_mem_gb": 2.66,
+      "n_measured": 60,
+      "system": "cache-bridging, 25% top-K",
+      "connector_params": 825507
+    }
+  ]
+}

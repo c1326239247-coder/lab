@@ -1,4 +1,4 @@
-﻿# Python
+# Python
 __pycache__/
 *.pyc
 *.pyo
@@ -9,6 +9,9 @@ venv/
 # Embedded runtime (do not ship)
 python311_embed/
 
+# Hugging Face cache
+.hf/
+
 # Tool caches
 .codegraph/
 
@@ -16,5 +19,11 @@ python311_embed/
 Thumbs.db
 .DESKTOP/
 
-# Misc
+# Logs and scratch
 *.log
+*.err
+_*.py
+_*.txt
+_figs/
+extracted/
+extract.pyc

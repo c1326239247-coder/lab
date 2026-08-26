@@ -53,11 +53,9 @@ def _make_synthetic_image(config, object_label, seed):
 
 
 def _tokenize_bytes(text):
-    if isinstance(text, str):
+    if not isinstance(text, bytes):
         text = text.encode("utf-8")
-    elif isinstance(text, unicode):
-        text = text.encode("utf-8")
-    return np.array([ord(c) for c in text if ord(c) < 256], dtype=np.int64)
+    return np.array([b for b in bytearray(text) if b < 256], dtype=np.int64)
 
 
 # Per-position injection type assignment.  This is a simple proxy for

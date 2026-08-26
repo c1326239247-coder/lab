@@ -1,0 +1,117 @@
+{
+  "host_kv_stats": {
+    "k_std": 1.0,
+    "v_std": 0.02
+  },
+  "dataset": "GQA-spatial",
+  "system": "caption",
+  "config": {
+    "dataset": "GQA-spatial",
+    "system": "caption",
+    "inject_mode": "prepend",
+    "train_size": 3000,
+    "eval_size": 400,
+    "steps": 1500,
+    "batch_size": 8,
+    "lr": 0.001,
+    "n_visual": 36,
+    "rank": 64,
+    "keep_ratio": 1.0,
+    "no_geometry": false,
+    "no_gate": false,
+    "layer_mask": "",
+    "seed": 0,
+    "tag": "GQA_caption"
+  },
+  "device": {
+    "gpu": "NVIDIA GeForce RTX 5070 Ti",
+    "compute_capability": "12.0",
+    "vram_gb": 15.9,
+    "torch": "2.11.0+cu128",
+    "cuda": "12.8"
+  },
+  "connector_params": 6299648,
+  "accuracy": 34.25,
+  "accuracy_shuffled_images": 25.0,
+  "accuracy_no_visual": null,
+  "train_seconds": 486.2,
+  "train_peak_mem_gb": 3.53,
+  "eval_seconds": 19.8,
+  "eval_peak_mem_gb": 2.71,
+  "loss_first_25": 7.3592,
+  "loss_last_25": 0.8233,
+  "samples": [
+    {
+      "question": "Is the catcher on the left side?",
+      "prediction": "no",
+      "gold": "yes",
+      "score": 0.0
+    },
+    {
+      "question": "What is throwing the baseball?",
+      "prediction": "bat",
+      "gold": "pitcher",
+      "score": 0.0
+    },
+    {
+      "question": "Is the pillow on the left?",
+      "prediction": "yes",
+      "gold": "yes",
+      "score": 1.0
+    },
+    {
+      "question": "Which side of the image is the beige car on?",
+      "prediction": "right",
+      "gold": "left",
+      "score": 0.0
+    },
+    {
+      "question": "What is the girl wearing?",
+      "prediction": "dress",
+      "gold": "glasses",
+      "score": 0.0
+    },
+    {
+      "question": "What does the woman hold?",
+      "prediction": "tray",
+      "gold": "handbag",
+      "score": 0.0
+    },
+    {
+      "question": "What's the pitcher throwing?",
+      "prediction": "pitcher",
+      "gold": "baseball",
+      "score": 0.0
+    },
+    {
+      "question": "What color does the mirror the picture is to the left of have?",
+      "prediction": "gray",
+      "gold": "silver",
+      "score": 0.0
+    },
+    {
+      "question": "Who rides on a skateboard?",
+      "prediction": "skater",
+      "gold": "skater",
+      "score": 1.0
+    },
+    {
+      "question": "What color is the shirt the person is playing?",
+      "prediction": "white",
+      "gold": "black",
+      "score": 0.0
+    },
+    {
+      "question": "What's the chair in front of?",
+      "prediction": "table",
+      "gold": "door",
+      "score": 0.0
+    },
+    {
+      "question": "What is using the spices?",
+      "prediction": "pan",
+      "gold": "blender",
+      "score": 0.0
+    }
+  ]
+}

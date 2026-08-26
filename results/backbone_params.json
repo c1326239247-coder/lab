@@ -1,0 +1,15 @@
+{
+  "clip_id": "openai/clip-vit-large-patch14",
+  "clip_params": 303179776,
+  "llm_id": "TinyLlama/TinyLlama-1.1B-Chat-v1.0",
+  "llm_params": 1100048384,
+  "llm_num_layers": 22,
+  "llm_hidden_size": 2048,
+  "llm_num_attention_heads": 32,
+  "llm_num_key_value_heads": 4,
+  "clip_num_layers": 24,
+  "clip_hidden_size": 1024,
+  "clip_num_heads": 16,
+  "clip_image_size": 224,
+  "clip_patch_size": 14
+}

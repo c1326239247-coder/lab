@@ -1,0 +1,44 @@
+# -*- coding: utf-8 -*-
+"""Ablations on the GQA spatial subset.
+
+Each variant changes exactly one component of the bridge and is trained
+with an identical budget so the accuracy delta is attributable to that
+component.
+"""
+
+import os
+import subprocess
+
+PY = os.path.join(".venv", "Scripts", "python.exe")
+SCRIPT = os.path.join("experiments", "run_vqa.py")
+
+BASE = ["--dataset", "GQA-spatial", "--system", "bridge",
+        "--train-size", "3000", "--eval-size", "400",
+        "--steps", "800", "--batch-size", "8", "--lr", "1e-3"]
+
+VARIANTS = [
+    ("abl_full", []),
+    ("abl_no_geometry", ["--no-geometry"]),
+    ("abl_no_gate", ["--no-gate"]),
+    ("abl_only_basic", ["--layer-mask", "1,0,0,0"]),
+    ("abl_only_object", ["--layer-mask", "0,1,0,0"]),
+    ("abl_only_relation", ["--layer-mask", "0,0,1,0"]),
+    ("abl_only_attribute", ["--layer-mask", "0,0,0,1"]),
+    ("abl_drop_basic", ["--layer-mask", "0,1,1,1"]),
+    ("abl_drop_object", ["--layer-mask", "1,0,1,1"]),
+    ("abl_drop_relation", ["--layer-mask", "1,1,0,1"]),
+    ("abl_drop_attribute", ["--layer-mask", "1,1,1,0"]),
+    ("abl_keep50", ["--keep-ratio", "0.5"]),
+    ("abl_keep25", ["--keep-ratio", "0.25"]),
+]
+
+
+def main():
+    for tag, extra in VARIANTS:
+        print("=== %s ===" % tag, flush=True)
+        subprocess.run([PY, SCRIPT] + BASE + extra + ["--tag", tag], check=True)
+    print("ALL ABLATIONS DONE", flush=True)
+
+
+if __name__ == "__main__":
+    main()

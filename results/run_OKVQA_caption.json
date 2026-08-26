@@ -1,0 +1,117 @@
+{
+  "host_kv_stats": {
+    "k_std": 1.0,
+    "v_std": 0.02
+  },
+  "dataset": "OK-VQA",
+  "system": "caption",
+  "config": {
+    "dataset": "OK-VQA",
+    "system": "caption",
+    "inject_mode": "prepend",
+    "train_size": 3000,
+    "eval_size": 400,
+    "steps": 1500,
+    "batch_size": 8,
+    "lr": 0.001,
+    "n_visual": 36,
+    "rank": 64,
+    "keep_ratio": 1.0,
+    "no_geometry": false,
+    "no_gate": false,
+    "layer_mask": "",
+    "seed": 0,
+    "tag": "OKVQA_caption"
+  },
+  "device": {
+    "gpu": "NVIDIA GeForce RTX 5070 Ti",
+    "compute_capability": "12.0",
+    "vram_gb": 15.9,
+    "torch": "2.11.0+cu128",
+    "cuda": "12.8"
+  },
+  "connector_params": 6299648,
+  "accuracy": 26.67,
+  "accuracy_shuffled_images": 17.17,
+  "accuracy_no_visual": null,
+  "train_seconds": 496.4,
+  "train_peak_mem_gb": 3.59,
+  "eval_seconds": 26.6,
+  "eval_peak_mem_gb": 2.71,
+  "loss_first_25": 6.852,
+  "loss_last_25": 1.4034,
+  "samples": [
+    {
+      "question": "What species of bear is this?",
+      "prediction": "black bear",
+      "gold": "brown bear",
+      "score": 0.0
+    },
+    {
+      "question": "What kind of utensil is this kid holding in both hands?",
+      "prediction": "fork",
+      "gold": "fork",
+      "score": 1.0
+    },
+    {
+      "question": "What building is this?",
+      "prediction": "church",
+      "gold": "barn",
+      "score": 0.6666666666666666
+    },
+    {
+      "question": "What material is burning?",
+      "prediction": "paper",
+      "gold": "wax",
+      "score": 0.0
+    },
+    {
+      "question": "The man in the photo is using what to hit the ball?",
+      "prediction": "bat",
+      "gold": "bat",
+      "score": 1.0
+    },
+    {
+      "question": "What is connected to the fire hydrant?",
+      "prediction": "pump",
+      "gold": "hose",
+      "score": 0.0
+    },
+    {
+      "question": "How many passengers does this airplane carry?",
+      "prediction": "150",
+      "gold": "300",
+      "score": 0.0
+    },
+    {
+      "question": "What long strap can be tied to the object around the animal's neck?",
+      "prediction": "leash",
+      "gold": "leash",
+      "score": 1.0
+    },
+    {
+      "question": "What is the temperature like?",
+      "prediction": "hot",
+      "gold": "warm",
+      "score": 0.6666666666666666
+    },
+    {
+      "question": "What birds are these?",
+      "prediction": "eagles",
+      "gold": "gulls",
+      "score": 0.0
+    },
+    {
+      "question": "What other types of fruit might be used in this desert?",
+      "prediction": "banana",
+      "gold": "cherry",
+      "score": 0.0
+    },
+    {
+      "question": "How many survivers are there from this crash?",
+      "prediction": "1",
+      "gold": "0",
+      "score": 0.6666666666666666
+    }
+  ]
+}

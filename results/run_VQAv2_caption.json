@@ -1,0 +1,117 @@
+{
+  "host_kv_stats": {
+    "k_std": 1.0,
+    "v_std": 0.02
+  },
+  "dataset": "VQAv2",
+  "system": "caption",
+  "config": {
+    "dataset": "VQAv2",
+    "system": "caption",
+    "inject_mode": "prepend",
+    "train_size": 3000,
+    "eval_size": 400,
+    "steps": 1500,
+    "batch_size": 8,
+    "lr": 0.001,
+    "n_visual": 36,
+    "rank": 64,
+    "keep_ratio": 1.0,
+    "no_geometry": false,
+    "no_gate": false,
+    "layer_mask": "",
+    "seed": 0,
+    "tag": "VQAv2_caption"
+  },
+  "device": {
+    "gpu": "NVIDIA GeForce RTX 5070 Ti",
+    "compute_capability": "12.0",
+    "vram_gb": 15.9,
+    "torch": "2.11.0+cu128",
+    "cuda": "12.8"
+  },
+  "connector_params": 6299648,
+  "accuracy": 34.75,
+  "accuracy_shuffled_images": 30.5,
+  "accuracy_no_visual": null,
+  "train_seconds": 484.1,
+  "train_peak_mem_gb": 3.53,
+  "eval_seconds": 22.9,
+  "eval_peak_mem_gb": 2.71,
+  "loss_first_25": 5.8654,
+  "loss_last_25": 1.2379,
+  "samples": [
+    {
+      "question": "How old is the longest serving Air Force aircraft?",
+      "prediction": "1960",
+      "gold": "i don't know",
+      "score": 0.0
+    },
+    {
+      "question": "Is there anyone wearing glasses?",
+      "prediction": "no",
+      "gold": "yes",
+      "score": 0.0
+    },
+    {
+      "question": "What is white behind the plane?",
+      "prediction": "airport",
+      "gold": "contrail",
+      "score": 0.0
+    },
+    {
+      "question": "What is the man holding in his hand?",
+      "prediction": "umbrella",
+      "gold": "luggage",
+      "score": 0.0
+    },
+    {
+      "question": "How many monitors are there?",
+      "prediction": "2",
+      "gold": "3",
+      "score": 0.0
+    },
+    {
+      "question": "Is this daytime or night time?",
+      "prediction": "night",
+      "gold": "daytime",
+      "score": 0.0
+    },
+    {
+      "question": "Is the train moving?",
+      "prediction": "yes",
+      "gold": "no",
+      "score": 0.0
+    },
+    {
+      "question": "What is the brand of the laptop?",
+      "prediction": "lenovo",
+      "gold": "apple",
+      "score": 0.0
+    },
+    {
+      "question": "Would firefighters find the vegetation's proximity to the hydrant annoying?",
+      "prediction": "no",
+      "gold": "no",
+      "score": 1.0
+    },
+    {
+      "question": "What color is the bus?",
+      "prediction": "red",
+      "gold": "green",
+      "score": 0.0
+    },
+    {
+      "question": "What is in the man's hand?",
+      "prediction": "pencil",
+      "gold": "wii controller",
+      "score": 0.0
+    },
+    {
+      "question": "What color is the floor?",
+      "prediction": "brown",
+      "gold": "white",
+      "score": 0.0
+    }
+  ]
+}
