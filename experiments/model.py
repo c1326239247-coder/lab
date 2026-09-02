@@ -184,17 +184,40 @@ class HierarchicalCacheExtractor(nn.Module):
         return cache, coords
 
     @staticmethod
-    def _pool2d(x, grid, side):
+    def _grid_pool(x, grid, side):
+        """Average-pool a (B, C, grid, grid) map down to (B, C, side, side).
+
+        F.adaptive_avg_pool2d has a non-deterministic CUDA backward, which
+        made identical configurations irreproducible.  When grid is an exact
+        multiple of side the same result is obtained by reshaping into blocks
+        and taking a mean, which is deterministic; otherwise we fall back to
+        an explicit index-based block mean.  Both paths are differentiable.
+        """
+        batch, channels = x.shape[0], x.shape[1]
+        if grid % side == 0:
+            factor = grid // side
+            x = x.reshape(batch, channels, side, factor, side, factor)
+            return x.mean(dim=(3, 5))
+        # Unequal split: build the same block boundaries adaptive pooling uses
+        # and average each block explicitly.
+        bounds = [(i * grid) // side for i in range(side + 1)]
+        rows = torch.stack([x[:, :, bounds[i]:bounds[i + 1], :].mean(dim=2)
+                            for i in range(side)], dim=2)
+        return torch.stack([rows[:, :, :, bounds[j]:bounds[j + 1]].mean(dim=3)
+                            for j in range(side)], dim=3)
+
+    @classmethod
+    def _pool2d(cls, x, grid, side):
         batch, _, dim = x.shape
         x = x.transpose(1, 2).reshape(batch, dim, grid, grid)
-        x = F.adaptive_avg_pool2d(x, side)
+        x = cls._grid_pool(x, grid, side)
         return x.reshape(batch, dim, side * side).transpose(1, 2)
 
-    @staticmethod
-    def _pool_coords(coord, grid, side):
+    @classmethod
+    def _pool_coords(cls, coord, grid, side):
         batch = coord.shape[0]
         c = coord.transpose(1, 2).reshape(batch, 2, grid, grid)
-        c = F.adaptive_avg_pool2d(c, side)
+        c = cls._grid_pool(c, grid, side)
         return c.reshape(batch, 2, side * side).transpose(1, 2)
 
 
@@ -293,7 +316,7 @@ class CacheBridgeVQA(nn.Module):
     def __init__(self, clip, llm, cfg, inject_mode="prepend",
                  use_geometry=True, use_gate=True, gate_mode="learned",
                  layer_mask=None,
-                 keep_ratio=1.0):
+                 keep_ratio=1.0, per_layer_scale=False):
         super(CacheBridgeVQA, self).__init__()
         self.clip = clip
         self.llm = llm
@@ -304,13 +327,24 @@ class CacheBridgeVQA(nn.Module):
         self.inject_mode = inject_mode
         self.layer_mask = layer_mask
         self.keep_ratio = keep_ratio
+        # Two learned scalars (one for K, one for V) per decoder layer.
+        # Initialised at one, so the model starts from the shared-cache
+        # configuration and any gain is attributable to depth adaptation.
+        if per_layer_scale:
+            self.layer_scales = nn.Parameter(
+                torch.ones(llm.config.num_hidden_layers, 2))
+        else:
+            self.layer_scales = None
         for param in self.clip.parameters():
             param.requires_grad = False
         for param in self.llm.parameters():
             param.requires_grad = False
 
     def trainable_parameters(self):
-        return [p for p in self.bridge.parameters() if p.requires_grad]
+        params = [p for p in self.bridge.parameters() if p.requires_grad]
+        if self.layer_scales is not None:
+            params.append(self.layer_scales)
+        return params
 
     def _compress(self, k, v):
         """Top-K salience selection used by the compression ablation."""
@@ -335,7 +369,8 @@ class CacheBridgeVQA(nn.Module):
         summary = embed.detach().mean(dim=1, keepdim=True)
         k, v = self.visual_kv(pixel_values, summary)
         return run_llm_with_visual_kv(self.llm, embed, attention_mask,
-                                      labels, k, v, self.inject_mode)
+                                      labels, k, v, self.inject_mode,
+                                      self.layer_scales)
 
     @torch.no_grad()
     def generate(self, pixel_values, input_ids, attention_mask, max_new_tokens=8):
@@ -343,7 +378,8 @@ class CacheBridgeVQA(nn.Module):
         summary = embed.mean(dim=1, keepdim=True)
         k, v = self.visual_kv(pixel_values, summary)
         return generate_with_visual_kv(self.llm, embed, attention_mask, k, v,
-                                       self.inject_mode, max_new_tokens)
+                                       self.inject_mode, max_new_tokens,
+                                       self.layer_scales)
 
 
 class CaptionBaseline(nn.Module):
@@ -364,6 +400,9 @@ class CaptionBaseline(nn.Module):
         self.llm = llm
         self.cfg = cfg
         self.n_visual = n_visual
+        # When False the soft visual prefix is zeroed, which is the
+        # baseline's equivalent of the bridge's disabled level mask.
+        self.use_visual = True
         self.connector = nn.Sequential(
             nn.Linear(cfg.vision_dim, cfg.hidden_size),
             nn.GELU(),
@@ -387,9 +426,70 @@ class CaptionBaseline(nn.Module):
         grid = self.cfg.grid
         batch, _, dim = hidden.shape
         pooled = hidden.transpose(1, 2).reshape(batch, dim, grid, grid)
-        pooled = F.adaptive_avg_pool2d(pooled, side)
+        pooled = HierarchicalCacheExtractor._grid_pool(pooled, grid, side)
         pooled = pooled.reshape(batch, dim, side * side).transpose(1, 2)
-        return self.out_norm(self.connector(pooled))
+        prefix = self.out_norm(self.connector(pooled))
+        if not self.use_visual:
+            prefix = torch.zeros_like(prefix)
+        return prefix
+
+    def forward(self, pixel_values, input_ids, attention_mask, labels):
+        prefix = self.visual_prefix(pixel_values)
+        embed = self.llm.get_input_embeddings()(input_ids)
+        inputs = torch.cat([prefix, embed], dim=1)
+        pad = torch.ones(prefix.shape[:2], dtype=attention_mask.dtype,
+                         device=attention_mask.device)
+        mask = torch.cat([pad, attention_mask], dim=1)
+        ignore = torch.full(prefix.shape[:2], -100, dtype=labels.dtype,
+                            device=labels.device)
+        full_labels = torch.cat([ignore, labels], dim=1)
+        out = self.llm(inputs_embeds=inputs, attention_mask=mask)
+        eos_id = self.llm.config.eos_token_id
+        if isinstance(eos_id, (list, tuple)):
+            eos_id = eos_id[0]
+        return answer_loss(out.logits, full_labels, eos_id)
+
+    @torch.no_grad()
+    def generate(self, pixel_values, input_ids, attention_mask, max_new_tokens=8):
+        prefix = self.visual_prefix(pixel_values)
+        embed = self.llm.get_input_embeddings()(input_ids)
+        inputs = torch.cat([prefix, embed], dim=1)
+        pad = torch.ones(prefix.shape[:2], dtype=attention_mask.dtype,
+                         device=attention_mask.device)
+        mask = torch.cat([pad, attention_mask], dim=1)
+        return greedy_decode(self.llm, inputs, mask, max_new_tokens)
+
+
+class BlindBaseline(nn.Module):
+    """Question-only control: the frozen LLM with no visual pathway at all.
+
+    The image is never read.  A soft prefix of the same length as the other
+    two systems is learned from a bias vector, so the LLM sees a prompt of
+    comparable shape and the only thing missing is the image.  This measures
+    how much of any reported accuracy is a language prior over frequent
+    answers rather than visual grounding, which neither the mismatched-image
+    nor the disabled-pathway control can establish on its own.
+    """
+
+    mode = "blind"
+
+    def __init__(self, clip, llm, cfg, n_visual=32):
+        super(BlindBaseline, self).__init__()
+        self.llm = llm
+        self.cfg = cfg
+        self.n_visual = n_visual
+        side = int(math.sqrt(n_visual))
+        self.prefix = nn.Parameter(torch.zeros(side * side, cfg.hidden_size))
+        nn.init.normal_(self.prefix, std=0.02)
+        for param in self.llm.parameters():
+            param.requires_grad = False
+
+    def trainable_parameters(self):
+        return [self.prefix]
+
+    def visual_prefix(self, pixel_values):
+        batch = pixel_values.shape[0]
+        return self.prefix.unsqueeze(0).expand(batch, -1, -1).to(pixel_values.dtype)
 
     def forward(self, pixel_values, input_ids, attention_mask, labels):
         prefix = self.visual_prefix(pixel_values)
@@ -423,7 +523,23 @@ def _expand_kv(k, v, llm):
     return [(k, v) for _ in range(llm.config.num_hidden_layers)]
 
 
-def run_llm_with_visual_kv(llm, embed, attention_mask, labels, k, v, inject_mode):
+def scale_for_layer(k, v, layer_scales, layer_idx):
+    """Optionally rescale the bridged cache per decoder layer.
+
+    With a single shared cache every one of the 22 decoder layers reads
+    exactly the same K/V, which the analysis identifies as a likely
+    reason the injected cache is hard to read.  Two learned scalars per
+    layer are the cheapest way to let the depth profile differ.
+    """
+    if layer_scales is None:
+        return k, v
+    sk = layer_scales[layer_idx, 0].to(k.dtype)
+    sv = layer_scales[layer_idx, 1].to(v.dtype)
+    return k * sk, v * sv
+
+
+def run_llm_with_visual_kv(llm, embed, attention_mask, labels, k, v,
+                           inject_mode, layer_scales=None):
     """Forward the LLM with the visual cache spliced into past-key-values."""
     from transformers.cache_utils import DynamicCache
 
@@ -437,7 +553,8 @@ def run_llm_with_visual_kv(llm, embed, attention_mask, labels, k, v, inject_mode
     batch, n_visual = k.shape[0], k.shape[2]
     cache = DynamicCache()
     for layer_idx in range(llm.config.num_hidden_layers):
-        cache.update(k, v, layer_idx)
+        lk, lv = scale_for_layer(k, v, layer_scales, layer_idx)
+        cache.update(lk, lv, layer_idx)
 
     visual_mask = torch.ones(batch, n_visual, dtype=attention_mask.dtype,
                              device=attention_mask.device)
@@ -491,7 +608,7 @@ def greedy_decode(llm, inputs_embeds, mask, max_new_tokens, cache=None,
 
 @torch.no_grad()
 def generate_with_visual_kv(llm, embed, attention_mask, k, v, inject_mode,
-                            max_new_tokens):
+                            max_new_tokens, layer_scales=None):
     """Greedy decoding with the visual cache resident in past-key-values."""
     from transformers.cache_utils import DynamicCache
 
@@ -503,7 +620,8 @@ def generate_with_visual_kv(llm, embed, attention_mask, k, v, inject_mode,
     else:
         n_visual = k.shape[2]
         for layer_idx in range(llm.config.num_hidden_layers):
-            cache.update(k, v, layer_idx)
+            lk, lv = scale_for_layer(k, v, layer_scales, layer_idx)
+            cache.update(lk, lv, layer_idx)
         visual_mask = torch.ones(batch, n_visual, dtype=attention_mask.dtype,
                                  device=attention_mask.device)
         mask = torch.cat([visual_mask, attention_mask], dim=1)

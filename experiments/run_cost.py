@@ -35,12 +35,19 @@ def measure(system, batcher, rows, repeats, warmup=5):
         torch.cuda.synchronize()
         if i >= warmup:
             latencies.append((time.time() - start) * 1000.0)
-    peak = torch.cuda.max_memory_allocated() / 1024 ** 3
+    peak = torch.cuda.max_memory_allocated()
     latencies.sort()
+    mean = sum(latencies) / len(latencies)
+    var = sum((x - mean) ** 2 for x in latencies) / max(1, len(latencies) - 1)
     return {
-        "latency_ms_mean": round(sum(latencies) / len(latencies), 1),
+        "latency_ms_mean": round(mean, 1),
+        "latency_ms_std": round(var ** 0.5, 1),
         "latency_ms_median": round(latencies[len(latencies) // 2], 1),
-        "peak_mem_gb": round(peak, 2),
+        # Peak memory is dominated by the two frozen backbones, so the
+        # differences between connectors show up only in the third decimal
+        # of a GB; the raw byte count is kept as well.
+        "peak_mem_gb": round(peak / 1024 ** 3, 3),
+        "peak_mem_bytes": int(peak),
         "n_measured": len(latencies),
     }
 
@@ -61,7 +68,9 @@ def main():
     M.calibrate_kv_stats(cfg, llm, llm.get_input_embeddings()(probe[1]))
 
     variants = [
-        ("text only (no visual pathway)",
+        ("question only (blind control)",
+         R.build_system("blind", clip, llm, cfg)),
+        ("cache-bridging, cache disabled",
          R.build_system("bridge", clip, llm, cfg, layer_mask=[0, 0, 0, 0])),
         ("caption-style projection",
          R.build_system("caption", clip, llm, cfg)),

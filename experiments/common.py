@@ -30,11 +30,28 @@ def setup_env():
     os.environ.setdefault("HF_HUB_DISABLE_SYMLINKS_WARNING", "1")
 
 
-def set_seed(seed):
+def set_seed(seed, deterministic=True):
+    """Seed every RNG and, by default, force deterministic kernels.
+
+    Without this the 2D pooling in the bridge has a non-deterministic CUDA
+    backward and an identical configuration does not reproduce; with it the
+    same seed gives the same number on the same machine.
+    """
     random.seed(seed)
     np.random.seed(seed)
     torch.manual_seed(seed)
     torch.cuda.manual_seed_all(seed)
+    if deterministic:
+        os.environ.setdefault("CUBLAS_WORKSPACE_CONFIG", ":4096:8")
+        torch.use_deterministic_algorithms(True, warn_only=True)
+        torch.backends.cudnn.deterministic = True
+        torch.backends.cudnn.benchmark = False
+        # The fused attention kernels have a non-deterministic backward.
+        # Sequences here are short (a few dozen tokens), so the math
+        # kernel costs little and makes training bit-for-bit repeatable.
+        torch.backends.cuda.enable_mem_efficient_sdp(False)
+        torch.backends.cuda.enable_flash_sdp(False)
+        torch.backends.cuda.enable_math_sdp(True)
 
 
 def device_report():
@@ -81,21 +98,35 @@ def load_okvqa(limit):
 
 
 def load_vqav2(limit):
-    """Real VQAv2 validation subset (merve/vqav2-small)."""
+    """Real VQAv2 validation subset (merve/vqav2-small).
+
+    The split is sharded; shards are pulled in order until `limit` rows
+    are available, so the evaluation set can be enlarged without changing
+    the sampling procedure.
+    """
     from huggingface_hub import hf_hub_download
     import pyarrow.parquet as pq
 
-    path = hf_hub_download("merve/vqav2-small",
-                           "data/validation-00000-of-00007.parquet",
-                           repo_type="dataset")
-    table = pq.read_table(path, columns=["question", "multiple_choice_answer", "image"])
     rows = []
-    for record in table.to_pylist():
-        rows.append({
-            "question": record["question"],
-            "answers": [record["multiple_choice_answer"]] * 10,
-            "image": record["image"]["bytes"],
-        })
+    for shard in range(7):
+        name = "data/validation-0000%d-of-00007.parquet" % shard
+        try:
+            path = hf_hub_download("merve/vqav2-small", name,
+                                   repo_type="dataset")
+        except Exception:
+            # Shards beyond the ones already fetched are optional; stop
+            # early rather than fail when the hub is unreachable.
+            break
+        table = pq.read_table(
+            path, columns=["question", "multiple_choice_answer", "image"])
+        for record in table.to_pylist():
+            rows.append({
+                "question": record["question"],
+                "answers": [record["multiple_choice_answer"]] * 10,
+                "image": record["image"]["bytes"],
+            })
+        if len(rows) >= limit:
+            break
     random.Random(0).shuffle(rows)
     return rows[:limit]
 
@@ -180,6 +211,49 @@ def vqa_accuracy(prediction, ground_truths):
     golds = [normalize_answer(g) for g in ground_truths]
     matches = sum(1 for g in golds if g == pred)
     return min(matches / 3.0, 1.0)
+
+
+def bootstrap_ci(scores, n_boot=10000, alpha=0.05, seed=0):
+    """Percentile bootstrap confidence interval for a mean VQA score.
+
+    `scores` are the per-question VQA scores in [0, 1].  Returned values
+    are in percent, matching the accuracies reported elsewhere.
+    """
+    if not scores:
+        return None
+    data = np.asarray(scores, dtype=np.float64)
+    rng = np.random.default_rng(seed)
+    idx = rng.integers(0, len(data), size=(n_boot, len(data)))
+    means = data[idx].mean(axis=1)
+    low, high = np.percentile(means, [100 * alpha / 2, 100 * (1 - alpha / 2)])
+    return {"mean": round(100.0 * float(data.mean()), 2),
+            "low": round(100.0 * float(low), 2),
+            "high": round(100.0 * float(high), 2),
+            "half_width": round(100.0 * float(high - low) / 2.0, 2),
+            "n": int(len(data))}
+
+
+def paired_delta_ci(scores_a, scores_b, n_boot=10000, alpha=0.05, seed=0):
+    """Bootstrap CI for the paired difference mean(a) - mean(b).
+
+    The two conditions are scored on the same questions with the same
+    weights, so pairing removes the question-difficulty variance and gives
+    a much tighter interval than comparing two independent intervals.
+    """
+    if not scores_a or not scores_b or len(scores_a) != len(scores_b):
+        return None
+    a = np.asarray(scores_a, dtype=np.float64)
+    b = np.asarray(scores_b, dtype=np.float64)
+    diff = a - b
+    rng = np.random.default_rng(seed)
+    idx = rng.integers(0, len(diff), size=(n_boot, len(diff)))
+    means = diff[idx].mean(axis=1)
+    low, high = np.percentile(means, [100 * alpha / 2, 100 * (1 - alpha / 2)])
+    return {"delta": round(100.0 * float(diff.mean()), 2),
+            "low": round(100.0 * float(low), 2),
+            "high": round(100.0 * float(high), 2),
+            "significant": bool(low > 0 or high < 0),
+            "n": int(len(diff))}
 
 
 def save_json(name, payload):

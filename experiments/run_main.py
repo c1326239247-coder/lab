@@ -1,36 +1,37 @@
 # -*- coding: utf-8 -*-
-"""Run the main comparison: three datasets x two connector designs."""
+"""Run the main comparison: three datasets x three systems.
+
+The evaluation split is 2000 questions.  With 400 questions the 95%
+bootstrap interval on a single accuracy is about +/-4 points, which is
+wider than most of the differences discussed in the paper; 2000 questions
+brings it under +/-2 and is affordable because only the connector trains.
+"""
 
 import os
 import subprocess
-import sys
 
-RUNS = [
-    ("GQA-spatial", "caption", "GQA_caption"),
-    ("GQA-spatial", "bridge", "GQA_bridge"),
-    ("VQAv2", "caption", "VQAv2_caption"),
-    ("VQAv2", "bridge", "VQAv2_bridge"),
-    ("OK-VQA", "caption", "OKVQA_caption"),
-    ("OK-VQA", "bridge", "OKVQA_bridge"),
-]
+RUNS = []
+for dataset, prefix in [("GQA-spatial", "GQA"), ("VQAv2", "VQAv2"),
+                        ("OK-VQA", "OKVQA")]:
+    for system in ["blind", "caption", "bridge"]:
+        RUNS.append((dataset, system, "%s_%s" % (prefix, system)))
 
 PY = os.path.join(".venv", "Scripts", "python.exe")
 SCRIPT = os.path.join("experiments", "run_vqa.py")
 
+BASE = ["--train-size", "3000", "--eval-size", "2000", "--steps", "1500",
+        "--batch-size", "8", "--lr", "1e-3"]
+
 
 def main():
     for dataset, system, tag in RUNS:
+        if os.path.exists(os.path.join("results", "run_%s.json" % tag)):
+            print("=== %s (already present, skipped) ===" % tag, flush=True)
+            continue
         print("=== %s ===" % tag, flush=True)
-        cmd = [PY, SCRIPT,
-               "--dataset", dataset,
-               "--system", system,
-               "--train-size", "3000",
-               "--eval-size", "400",
-               "--steps", "1500",
-               "--batch-size", "8",
-               "--lr", "1e-3",
-               "--tag", tag]
-        subprocess.run(cmd, check=True)
+        subprocess.run([PY, SCRIPT] + BASE
+                       + ["--dataset", dataset, "--system", system,
+                          "--tag", tag], check=True)
     print("ALL MAIN RUNS DONE", flush=True)
 
 

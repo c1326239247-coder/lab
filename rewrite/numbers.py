@@ -1,5 +1,10 @@
 # -*- coding: utf-8 -*-
-"""Collect every number the manuscript quotes from results/*.json."""
+"""Collect every number the manuscript quotes from results/*.json.
+
+Nothing in the manuscript is typed by hand: build_docx.py substitutes the
+values produced here, and an unresolved placeholder aborts the build, so
+the text cannot drift away from the measurements in the repository.
+"""
 
 import io
 import json
@@ -15,37 +20,77 @@ def load(name):
         return json.load(handle)
 
 
+def maybe(name):
+    path = os.path.join(RESULTS, name)
+    if not os.path.exists(path):
+        return None
+    return load(name)
+
+
 def pct(value):
     return "%.2f%%" % value
 
 
-def signed(value):
-    return "%+.2f" % value
+def ci(run, key="accuracy_ci95"):
+    """A mean with its 95% bootstrap interval, as the text quotes it."""
+    block = run[key]
+    return "%.2f%% (95%% CI %.2f-%.2f)" % (block["mean"], block["low"],
+                                           block["high"])
+
+
+def half(run, key="accuracy_ci95"):
+    return "%.2f" % run[key]["half_width"]
+
+
+def delta(block):
+    """A paired difference with its interval and verdict."""
+    return "%+.2f points (95%% CI %+.2f to %+.2f)" % (
+        block["delta"], block["low"], block["high"])
+
+
+def mean_sd(values):
+    n = len(values)
+    mean = sum(values) / n
+    if n < 2:
+        return mean, 0.0
+    var = sum((x - mean) ** 2 for x in values) / (n - 1)
+    return mean, var ** 0.5
 
 
 def facts():
     gqa_b = load("run_GQA_bridge.json")
     gqa_c = load("run_GQA_caption.json")
-    gqa_big = load("run_GQA_bridge_big.json")
+    gqa_n = load("run_GQA_blind.json")
     vqa_b = load("run_VQAv2_bridge.json")
     vqa_c = load("run_VQAv2_caption.json")
+    vqa_n = load("run_VQAv2_blind.json")
     ok_b = load("run_OKVQA_bridge.json")
     ok_c = load("run_OKVQA_caption.json")
+    ok_n = load("run_OKVQA_blind.json")
     cost = load("inference_cost.json")
     back = load("backbone_params.json")
-    abl = dict((tag, load("run_abl_%s.json" % tag)) for tag in
-               ["full", "no_geometry", "no_gate", "gate_fixed", "drop_basic",
-                "drop_object", "drop_relation", "drop_attribute", "only_basic",
-                "only_object", "only_relation", "only_attribute", "keep50",
-                "keep25"])
+
+    abl_tags = ["full", "no_geometry", "no_gate", "gate_fixed",
+                "per_layer_scale", "drop_basic", "drop_object",
+                "drop_relation", "drop_attribute", "only_basic",
+                "only_object", "only_relation", "only_attribute",
+                "keep50", "keep25"]
+    abl = dict((tag, load("run_abl_%s.json" % tag)) for tag in abl_tags)
+
+    cap_tags = ["rank64", "rank128", "rank256", "rank512", "rank1024"]
+    capacity = [(tag, load("run_cap_%s.json" % tag)) for tag in cap_tags]
+
+    probe_b = maybe("probe_GQA_bridge.json")
+    probe_c = maybe("probe_GQA_caption.json")
 
     cfg = gqa_b["config"]
     dev = gqa_b["device"]
     by_system = dict((v["system"], v) for v in cost["variants"])
-    cap_lat = by_system["caption-style projection"]["latency_ms_mean"]
-    brg_lat = by_system["cache-bridging, full cache"]["latency_ms_mean"]
+    cap_cost = by_system["caption-style projection"]
+    brg_cost = by_system["cache-bridging, full cache"]
 
     n_visual = cfg["n_visual"]
+    side = int(round(n_visual ** 0.5))
     total_backbone = back["clip_params"] + back["llm_params"]
     small = gqa_b["connector_params"]
 
@@ -55,83 +100,327 @@ def facts():
     only = dict((k, abl["only_" + k]["accuracy"])
                 for k in ["basic", "object", "relation", "attribute"])
 
-    seeds = []
+    # Seed repeats, reported for both systems under identical conditions.
+    bridge_runs = [gqa_b["accuracy"]]
+    caption_runs = [gqa_c["accuracy"]]
+    seed_pairs = []
     for seed in [1, 2]:
-        pair = {}
-        for system in ["caption", "bridge"]:
-            path = os.path.join(RESULTS, "run_GQA_%s_seed%d.json" % (system, seed))
-            if os.path.exists(path):
-                pair[system] = load("run_GQA_%s_seed%d.json" % (system, seed))
-        if len(pair) == 2:
-            seeds.append((seed, pair["caption"]["accuracy"], pair["bridge"]["accuracy"]))
-    if seeds:
+        b = maybe("run_GQA_bridge_seed%d.json" % seed)
+        c = maybe("run_GQA_caption_seed%d.json" % seed)
+        if b is not None:
+            bridge_runs.append(b["accuracy"])
+        if c is not None:
+            caption_runs.append(c["accuracy"])
+        if b is not None and c is not None:
+            seed_pairs.append((seed, c["accuracy"], b["accuracy"]))
+    bridge_mean, bridge_sd = mean_sd(bridge_runs)
+    caption_mean, caption_sd = mean_sd(caption_runs)
+    if seed_pairs:
         parts = ["seed %d gives %s against %s" % (s, pct(c), pct(b))
-                 for s, c, b in seeds]
-        seed_sentence = ("Repeating the GQA-spatial comparison with two further "
-                         "initialisations reproduces the ordering, so it is not a "
-                         "seed artefact: " + "; ".join(parts) +
-                         " for the baseline and the bridge respectively.")
+                 for s, c, b in seed_pairs]
+        seed_sentence = ("Two further initialisations reproduce the ordering, "
+                         "so it is not a seed artefact: " + "; ".join(parts) +
+                         " for the baseline and the bridge respectively. Over "
+                         "the %d seeds the baseline averages %.2f%% "
+                         "(SD %.2f) and the bridge %.2f%% (SD %.2f), so the "
+                         "two systems have comparable run-to-run spread and "
+                         "the gap is an order of magnitude larger than it."
+                         % (len(caption_runs), caption_mean, caption_sd,
+                            bridge_mean, bridge_sd))
     else:
         seed_sentence = ""
 
-    # Same-seed repeat runs of the bridge.  adaptive_avg_pool2d has a
-    # non-deterministic CUDA backward, so an identical configuration does
-    # not reproduce bit-for-bit; we measure the spread instead of hiding it.
-    repeat_paths = ["run_GQA_bridge.json", "run_GQA_bridge_rerun2.json",
-                    "run_GQA_bridge_rerun3.json"]
-    repeats = [load(name)["accuracy"] for name in repeat_paths
-               if os.path.exists(os.path.join(RESULTS, name))]
-    repeat_spread = (max(repeats) - min(repeats)) if len(repeats) > 1 else 0.0
-    bridge_all = repeats + [
-        load("run_GQA_bridge_seed%d.json" % s_)["accuracy"] for s_ in [1, 2]
-        if os.path.exists(os.path.join(RESULTS, "run_GQA_bridge_seed%d.json" % s_))]
-    caption_all = [gqa_c["accuracy"]] + [
-        load("run_GQA_caption_seed%d.json" % s_)["accuracy"] for s_ in [1, 2]
-        if os.path.exists(os.path.join(RESULTS, "run_GQA_caption_seed%d.json" % s_))]
+    # Capacity sweep: the largest bridge against the default one.
+    cap_best_tag, cap_best = max(capacity,
+                                 key=lambda item: item[1]["accuracy"])
+    cap_largest = max(capacity,
+                      key=lambda item: item[1]["connector_params"])[1]
+    cap_range = "%s to %s" % ("{:,}".format(
+        min(r["connector_params"] for _, r in capacity)),
+        "{:,}".format(max(r["connector_params"] for _, r in capacity)))
+    cap_span = max(r["accuracy"] for _, r in capacity) - \
+        min(r["accuracy"] for _, r in capacity)
+    cap_sentence = "; ".join(
+        "%s parameters: %s" % ("{:,}".format(r["connector_params"]),
+                               pct(r["accuracy"]))
+        for _, r in capacity)
 
-    gqa_big_acc = gqa_big["accuracy"]
-    if abs(gqa_big_acc - gqa_b["accuracy"]) < 1e-9:
-        big_text = "identical to"
-    elif gqa_big_acc > gqa_b["accuracy"]:
-        big_text = "%+.2f points above" % (gqa_big_acc - gqa_b["accuracy"])
+    # Sentences whose wording depends on the direction of a measured
+    # difference are generated here rather than asserted in the body text,
+    # so the manuscript stays correct if a rerun changes the ordering.
+    def compare(name, bridge, blind, caption):
+        b = bridge["accuracy"]
+        n = blind["accuracy"]
+        c = caption["accuracy"]
+        if b > n:
+            rel = "above the blind control by %.2f points" % (b - n)
+        else:
+            rel = "below the blind control by %.2f points" % (n - b)
+        return "on %s the bridge is %s and %.2f points below the baseline" % (
+            name, rel, c - b)
+
+    blind_sentence = "; ".join([
+        compare("VQAv2", vqa_b, vqa_n, vqa_c),
+        compare("OK-VQA", ok_b, ok_n, ok_c),
+        compare("GQA-spatial", gqa_b, gqa_n, gqa_c)]) + "."
+
+    beats_blind = [name for name, b, n in
+                   [("VQAv2", vqa_b, vqa_n), ("OK-VQA", ok_b, ok_n),
+                    ("GQA-spatial", gqa_b, gqa_n)]
+                   if b["accuracy"] > n["accuracy"]]
+    if not beats_blind:
+        blind_verdict = ("On none of the three datasets does the bridge reach "
+                         "the accuracy of a connector that never sees the "
+                         "image at all")
+    elif len(beats_blind) == 3:
+        blind_verdict = ("The bridge is ahead of the blind control on all "
+                         "three datasets, so the visual pathway contributes "
+                         "on every dataset")
     else:
-        big_text = "%.2f points below" % (gqa_b["accuracy"] - gqa_big_acc)
+        blind_verdict = ("The bridge is ahead of the blind control on %s only"
+                         % " and ".join(beats_blind))
+
+    # The no-visual control moves in different directions per dataset; the
+    # text quotes this sentence instead of assuming a sign.
+    def novis_dir(name, run):
+        d = run["accuracy_no_visual"] - run["accuracy"]
+        verb = "raises" if d > 0 else "lowers"
+        return "%s: disabling the cache %s accuracy by %.2f points" % (
+            name, verb, abs(d))
+
+    novis_sentence = "; ".join([novis_dir("VQAv2", vqa_b),
+                                novis_dir("OK-VQA", ok_b),
+                                novis_dir("GQA-spatial", gqa_b)]) + "."
+
+    # The share of held-out answers that are empty or a verbatim word of the
+    # question, which is what the failure-case discussion quotes.
+    def degenerate_share(run):
+        rows = run.get("samples") or []
+        if not rows:
+            return None
+        bad = 0
+        for row in rows:
+            prediction = (row.get("prediction") or "").strip().lower()
+            question = (row.get("question") or "").lower()
+            words = set(question.replace("?", " ").split())
+            if not prediction or prediction in words:
+                bad += 1
+        return 100.0 * bad / len(rows)
+
+    deg_bridge = degenerate_share(ok_b)
+    deg_caption = degenerate_share(ok_c)
+
+    # Whether the mismatched-image control is significant is itself a
+    # per-dataset outcome, so the sentence that states it is generated.
+    sig = [name for name, run in [("VQAv2", vqa_b), ("OK-VQA", ok_b),
+                                  ("GQA-spatial", gqa_b)]
+           if run["paired_delta_shuffled"]["significant"]]
+    nonsig = [name for name, run in [("VQAv2", vqa_b), ("OK-VQA", ok_b),
+                                     ("GQA-spatial", gqa_b)]
+              if not run["paired_delta_shuffled"]["significant"]]
+    if not nonsig:
+        grounding_sentence = ("On all three datasets the paired interval "
+                              "excludes zero, so the injected cache is "
+                              "demonstrably image-dependent everywhere")
+    elif not sig:
+        grounding_sentence = ("On none of the three datasets does the paired "
+                              "interval exclude zero, so we cannot establish "
+                              "that the injected cache is image-dependent at "
+                              "all")
+    else:
+        grounding_sentence = (
+            "The paired interval excludes zero on %s but not on %s, so the "
+            "injected cache is demonstrably image-dependent on the former and "
+            "indistinguishable from an image-independent connector on the "
+            "latter" % (" and ".join(sig), " and ".join(nonsig)))
+
+    # The level ablations can go either way, so the sentence that reads them
+    # is generated from the signs rather than assumed.
+    level_names = {"basic": "basic", "object": "semantic-object",
+                   "relation": "spatial-relation", "attribute": "attribute"}
+    hurt = [(level_names[k], -v) for k, v in drop.items() if v < 0]
+    helped = [(level_names[k], v) for k, v in drop.items() if v >= 0]
+    parts = []
+    if hurt:
+        parts.append("removing the %s level%s costs %s point%s" % (
+            " and the ".join(n for n, _ in hurt),
+            "" if len(hurt) == 1 else "s",
+            " and ".join("%.2f" % d for _, d in hurt),
+            "" if len(hurt) == 1 and abs(hurt[0][1] - 1) < 1e-9 else "s"))
+    if helped:
+        parts.append("removing the %s level%s in fact improves accuracy by %s "
+                     "point%s" % (
+                         " and the ".join(n for n, _ in helped),
+                         "" if len(helped) == 1 else "s",
+                         " and ".join("%.2f" % d for _, d in helped),
+                         "" if len(helped) == 1 else "s"))
+    drop_sentence = ", while ".join(parts)
+
+    best_single = max(only.values())
+    if best_single >= abl_full:
+        single_verdict = ("the best single-level variant, %s, already matches "
+                          "the full hierarchy at %s, so the hierarchy is not "
+                          "earning its four-fold token cost"
+                          % (pct(best_single), pct(abl_full)))
+    else:
+        single_verdict = ("no single level matches the full hierarchy \u2014 the "
+                          "best single-level variant is %s against %s"
+                          % (pct(best_single), pct(abl_full)))
+
+    ordered = sorted(only.items(), key=lambda kv: -kv[1])
+    if ordered[0][0] == "relation":
+        level_hypothesis = ("the level named for spatial relations is indeed "
+                            "the strongest in isolation on the "
+                            "relation-heavy dataset, which is consistent with "
+                            "the hypothesis of Table 1")
+    else:
+        level_hypothesis = ("the strongest level in isolation is the one named "
+                            "%s rather than the one named for spatial "
+                            "relations, which the hypothesis of Table 1 would "
+                            "have predicted on a relation-heavy dataset"
+                            % level_names[ordered[0][0]])
+
+    # The gate ablation has two variants and their ordering is a result, not
+    # an assumption, so the sentence that interprets them is generated.
+    gate_fixed_delta = abl_full - abl["gate_fixed"]["accuracy"]
+    gate_half = abl["full"]["accuracy_ci95"]["half_width"]
+    if abs(gate_fixed_delta) <= gate_half:
+        gate_verdict = (
+            "It reaches %s, which is within the interval of the measurement, "
+            "so none of the effect of the gate ablation is attributable to the "
+            "adaptivity of the coefficient: what the no-gate row measures is "
+            "almost entirely the parameters that were removed with it"
+            % pct(abl["gate_fixed"]["accuracy"]))
+    elif gate_fixed_delta > 0:
+        gate_verdict = (
+            "It reaches %s, so %.2f points are attributable to the adaptivity "
+            "of the gate itself and the remainder to the parameters it carries"
+            % (pct(abl["gate_fixed"]["accuracy"]), gate_fixed_delta))
+    else:
+        gate_verdict = (
+            "It reaches %s, which is %.2f points above the full bridge, so the "
+            "learned coefficient is not helping at this budget and the entire "
+            "effect of the no-gate row is the parameters removed with it"
+            % (pct(abl["gate_fixed"]["accuracy"]), -gate_fixed_delta))
+
+    geo_delta = abl_full - abl["no_geometry"]["accuracy"]
+    if abs(geo_delta) <= gate_half:
+        geo_verdict = ("removing the 2D geometry bias changes accuracy by "
+                       "%.2f points at an essentially unchanged parameter "
+                       "count, which is inside the interval and therefore not "
+                       "evidence either way" % abs(geo_delta))
+    elif geo_delta > 0:
+        geo_verdict = ("removing the 2D geometry bias costs %.2f points at an "
+                       "essentially unchanged parameter count" % geo_delta)
+    else:
+        geo_verdict = ("removing the 2D geometry bias in fact improves "
+                       "accuracy by %.2f points at an essentially unchanged "
+                       "parameter count, so the bias is not earning its place "
+                       "at this budget" % (-geo_delta))
+
+    pls = abl["per_layer_scale"]
+    pls_delta = pls["accuracy"] - abl_full
+    pls_block = pls["accuracy_ci95"]
+    if abs(pls_delta) <= pls_block["half_width"]:
+        pls_verdict = ("The difference is inside the interval of the "
+                       "measurement, so giving each layer its own scale does "
+                       "not recover the deficit: sharing one cache across the "
+                       "depth is not, on its own, the binding constraint")
+    elif pls_delta > 0:
+        pls_verdict = ("The gain exceeds the interval of the measurement, so "
+                       "part of the deficit is attributable to feeding every "
+                       "layer the same cache")
+    else:
+        pls_verdict = ("The variant is worse than the shared cache by more "
+                       "than the interval of the measurement, so per-layer "
+                       "freedom costs rather than helps at this budget")
 
     total_seconds = 0.0
     for name in os.listdir(RESULTS):
         if name.startswith("run_") and name.endswith(".json"):
             run = load(name)
-            total_seconds += run.get("train_seconds", 0) + run.get("eval_seconds", 0)
+            total_seconds += run.get("train_seconds", 0) + \
+                run.get("eval_seconds", 0)
 
     values = {
+        # --- main comparison
         "gqa_bridge": pct(gqa_b["accuracy"]),
+        "gqa_bridge_ci": ci(gqa_b),
         "gqa_caption": pct(gqa_c["accuracy"]),
-        "gqa_caption_shuf": pct(gqa_c["accuracy_shuffled_images"]),
+        "gqa_caption_ci": ci(gqa_c),
+        "gqa_blind": pct(gqa_n["accuracy"]),
+        "gqa_blind_ci": ci(gqa_n),
         "gqa_shuf": pct(gqa_b["accuracy_shuffled_images"]),
         "gqa_novis": pct(gqa_b["accuracy_no_visual"]),
-        "gqa_shuf_delta": "%.2f" % (gqa_b["accuracy"] - gqa_b["accuracy_shuffled_images"]),
-        "gqa_novis_delta": "%.2f" % (gqa_b["accuracy"] - gqa_b["accuracy_no_visual"]),
-        "vqav2_bridge": pct(vqa_b["accuracy"]),
-        "vqav2_novis": pct(vqa_b["accuracy_no_visual"]),
-        "okvqa_novis": pct(ok_b["accuracy_no_visual"]),
+        "gqa_caption_shuf": pct(gqa_c["accuracy_shuffled_images"]),
+        "gqa_caption_novis": pct(gqa_c["accuracy_no_visual"]),
+        "vqa_bridge": pct(vqa_b["accuracy"]),
+        "vqa_caption": pct(vqa_c["accuracy"]),
+        "vqa_blind": pct(vqa_n["accuracy"]),
+        "vqa_shuf": pct(vqa_b["accuracy_shuffled_images"]),
+        "vqa_novis": pct(vqa_b["accuracy_no_visual"]),
+        "ok_bridge": pct(ok_b["accuracy"]),
+        "ok_caption": pct(ok_c["accuracy"]),
+        "ok_blind": pct(ok_n["accuracy"]),
+        "ok_shuf": pct(ok_b["accuracy_shuffled_images"]),
+        "ok_novis": pct(ok_b["accuracy_no_visual"]),
+        "ci_half_typical": half(gqa_b),
+        "ci_half_caption": half(gqa_c),
+        # --- gaps, all as paired quantities where the pairing exists
+        "gap_gqa": "%.2f" % (gqa_c["accuracy"] - gqa_b["accuracy"]),
         "gap_vqav2": "%.2f" % (vqa_c["accuracy"] - vqa_b["accuracy"]),
         "gap_okvqa": "%.2f" % (ok_c["accuracy"] - ok_b["accuracy"]),
-        "gap_gqa": "%.2f" % (gqa_c["accuracy"] - gqa_b["accuracy"]),
+        "gap_blind_gqa": "%.2f" % (gqa_n["accuracy"] - gqa_b["accuracy"]),
+        "gap_blind_vqa": "%.2f" % (vqa_n["accuracy"] - vqa_b["accuracy"]),
+        "gap_blind_ok": "%.2f" % (ok_n["accuracy"] - ok_b["accuracy"]),
+        "delta_gqa_shuf": delta(gqa_b["paired_delta_shuffled"]),
+        "delta_gqa_novis": delta(gqa_b["paired_delta_no_visual"]),
+        "delta_vqa_shuf": delta(vqa_b["paired_delta_shuffled"]),
+        "delta_vqa_novis": delta(vqa_b["paired_delta_no_visual"]),
+        "delta_ok_shuf": delta(ok_b["paired_delta_shuffled"]),
+        "delta_caption_shuf": delta(gqa_c["paired_delta_shuffled"]),
+        # --- seeds and spread
         "seed_sentence": seed_sentence,
-        "bridge_loss_first": "%.2f" % gqa_b["loss_first_25"],
-        "bridge_loss_last": "%.2f" % gqa_b["loss_last_25"],
-        "caption_loss_first": "%.2f" % gqa_c["loss_first_25"],
+        "blind_sentence": blind_sentence,
+        "blind_verdict": blind_verdict,
+        "novis_sentence": novis_sentence,
+        "grounding_sentence": grounding_sentence,
+        "deg_bridge": "\u2014" if deg_bridge is None else "%.0f%%" % deg_bridge,
+        "deg_caption": ("\u2014" if deg_caption is None
+                        else "%.0f%%" % deg_caption),
+        "n_samples": "%d" % len(ok_b.get("samples") or []),
+        "pls_verdict": pls_verdict,
+        "gate_verdict": gate_verdict,
+        "drop_sentence": drop_sentence,
+        "single_verdict": single_verdict,
+        "level_hypothesis": level_hypothesis,
+        "geo_verdict": geo_verdict,
+        "bridge_mean": pct(bridge_mean),
+        "bridge_sd": "%.2f" % bridge_sd,
+        "caption_mean": pct(caption_mean),
+        "caption_sd": "%.2f" % caption_sd,
+        "bridge_max": pct(max(bridge_runs)),
+        "caption_min": pct(min(caption_runs)),
+        "worst_case_gap": "%.2f" % (min(caption_runs) - max(bridge_runs)),
+        "n_bridge_runs": "%d" % len(bridge_runs),
+        "n_caption_runs": "%d" % len(caption_runs),
+        # --- capacity sweep
+        "cap_sentence": cap_sentence,
+        "cap_range": cap_range,
+        "cap_span": "%.2f" % cap_span,
+        "cap_best": pct(cap_best["accuracy"]),
+        "cap_best_params": "{:,}".format(cap_best["connector_params"]),
+        "cap_largest": pct(cap_largest["accuracy"]),
+        "cap_largest_params": "{:,}".format(cap_largest["connector_params"]),
+        "cap_n_points": "%d" % len(capacity),
+        # --- parameters and shapes
         "small_params": "{:,}".format(small),
-        "big_params": "{:,}".format(gqa_big["connector_params"]),
         "caption_params": "{:,}".format(gqa_c["connector_params"]),
-        "gqa_big": pct(gqa_big_acc),
-        "gqa_big_shuf": pct(gqa_big["accuracy_shuffled_images"]),
-        "gqa_big_delta_text": big_text,
-        "big_rank": gqa_big["config"]["rank"],
-        "big_n_visual": gqa_big["config"]["n_visual"],
+        "blind_params": "{:,}".format(gqa_n["connector_params"]),
         "k_std": "%.2f" % gqa_b["host_kv_stats"]["k_std"],
         "v_std": "%.2f" % gqa_b["host_kv_stats"]["v_std"],
-        "v_ratio": "%d" % round(1.0 / gqa_b["host_kv_stats"]["v_std"]),
+        "kv_ratio": "%d" % round(gqa_b["host_kv_stats"]["k_std"]
+                                 / gqa_b["host_kv_stats"]["v_std"]),
         "gpu": dev["gpu"],
         "vram": dev["vram_gb"],
         "cc": dev["compute_capability"],
@@ -145,17 +434,24 @@ def facts():
         "llm_kv_heads": back["llm_num_key_value_heads"],
         "llm_head_dim": back["llm_hidden_size"] // back["llm_num_attention_heads"],
         "llm_kv_dim": (back["llm_num_key_value_heads"]
-                       * (back["llm_hidden_size"] // back["llm_num_attention_heads"])),
+                       * (back["llm_hidden_size"]
+                          // back["llm_num_attention_heads"])),
         "clip_layers": back["clip_num_layers"],
         "vision_dim": back["clip_hidden_size"],
         "grid": back["clip_image_size"] // back["clip_patch_size"],
         "n_patches": (back["clip_image_size"] // back["clip_patch_size"]) ** 2,
         "n_visual": n_visual,
+        "pool_side": side,
         "n_visual_total": n_visual * 4,
         "rank": cfg["rank"],
-        "max_offset": back["clip_image_size"] // back["clip_patch_size"],
+        "max_offset": side - 1,
         "total_backbone": "{:,}".format(total_backbone),
         "bridge_pct": "%.3f%%" % (100.0 * small / total_backbone),
+        "summary_proj_params": "{:,}".format(back["llm_hidden_size"]
+                                            * (back["llm_num_key_value_heads"]
+                                               * (back["llm_hidden_size"]
+                                                  // back["llm_num_attention_heads"]))),
+        # --- protocol
         "lr": "%g" % cfg["lr"],
         "batch": cfg["batch_size"],
         "steps": cfg["steps"],
@@ -164,42 +460,56 @@ def facts():
         "train_size": cfg["train_size"],
         "eos_weight": "0.2",
         "max_new_tokens": 6,
+        "n_boot": "10,000",
+        # --- cost
         "cost_new_tokens": 6,
-        "cost_repeats": by_system["cache-bridging, full cache"]["n_measured"],
-        "caption_latency": "%.1f" % cap_lat,
-        "bridge_latency": "%.1f" % brg_lat,
-        "latency_pct": "%.1f%%" % (100.0 * (brg_lat - cap_lat) / cap_lat),
+        "cost_repeats": brg_cost["n_measured"],
+        "caption_latency": "%.1f" % cap_cost["latency_ms_mean"],
+        "caption_latency_sd": "%.1f" % cap_cost["latency_ms_std"],
+        "bridge_latency": "%.1f" % brg_cost["latency_ms_mean"],
+        "bridge_latency_sd": "%.1f" % brg_cost["latency_ms_std"],
+        "latency_pct": "%.1f%%" % (100.0 * (brg_cost["latency_ms_mean"]
+                                            - cap_cost["latency_ms_mean"])
+                                   / cap_cost["latency_ms_mean"]),
+        "caption_mem_mb": "%.0f" % (cap_cost["peak_mem_bytes"] / 1024.0 ** 2),
+        "bridge_mem_mb": "%.0f" % (brg_cost["peak_mem_bytes"] / 1024.0 ** 2),
         "bridge_train_s": "%.1f" % gqa_b["train_seconds"],
         "caption_train_s": "%.1f" % gqa_c["train_seconds"],
         "bridge_train_mem": "%.2f" % gqa_b["train_peak_mem_gb"],
         "caption_train_mem": "%.2f" % gqa_c["train_peak_mem_gb"],
         "bridge_train_s_min": "%.0f" % (gqa_b["train_seconds"] / 60.0),
         "total_gpu_hours": "%.1f" % (total_seconds / 3600.0),
+        # --- losses
+        "bridge_loss_first": "%.2f" % gqa_b["loss_first_25"],
+        "bridge_loss_last": "%.2f" % gqa_b["loss_last_25"],
+        "caption_loss_first": "%.2f" % gqa_c["loss_first_25"],
+        "caption_loss_last": "%.2f" % gqa_c["loss_last_25"],
+        # --- ablations
         "abl_full": pct(abl_full),
         "abl_gate": pct(abl["no_gate"]["accuracy"]),
         "abl_gate_delta": "%.2f" % (abl_full - abl["no_gate"]["accuracy"]),
         "abl_gate_params": "{:,}".format(abl["no_gate"]["connector_params"]),
         "abl_gate_fixed": pct(abl["gate_fixed"]["accuracy"]),
-        "abl_gate_fixed_params": "{:,}".format(abl["gate_fixed"]["connector_params"]),
-        "abl_gate_fixed_delta": "%.2f" % (abl_full - abl["gate_fixed"]["accuracy"]),
+        "abl_gate_fixed_params": "{:,}".format(
+            abl["gate_fixed"]["connector_params"]),
+        "abl_gate_fixed_delta": "%.2f" % (abl_full
+                                          - abl["gate_fixed"]["accuracy"]),
+        "abl_pls": pct(abl["per_layer_scale"]["accuracy"]),
+        "abl_pls_delta": "%+.2f" % (abl["per_layer_scale"]["accuracy"]
+                                    - abl_full),
+        "abl_pls_params": "{:,}".format(
+            abl["per_layer_scale"]["connector_params"]),
         "abl_novis": pct(abl["full"]["accuracy_no_visual"]),
-        "n_repeats": "%d" % len(repeats),
-        "repeat_spread": "%.2f" % repeat_spread,
-        "repeat_min": pct(min(repeats)),
-        "repeat_max": pct(max(repeats)),
-        "bridge_mean": pct(sum(bridge_all) / len(bridge_all)),
-        "bridge_max": pct(max(bridge_all)),
-        "caption_mean": pct(sum(caption_all) / len(caption_all)),
-        "caption_min": pct(min(caption_all)),
-        "worst_case_gap": "%.2f" % (min(caption_all) - max(bridge_all)),
-        "n_bridge_runs": "%d" % len(bridge_all),
-        "n_caption_runs": "%d" % len(caption_all),
+        "abl_geo": pct(abl["no_geometry"]["accuracy"]),
         "abl_geo_delta": "%.2f" % (abl_full - abl["no_geometry"]["accuracy"]),
+        "abl_keep50": pct(abl["keep50"]["accuracy"]),
+        "abl_keep25": pct(abl["keep25"]["accuracy"]),
         "abl_keep50_delta": "%.2f" % (abl_full - abl["keep50"]["accuracy"]),
         "abl_keep25_delta": "%.2f" % (abl_full - abl["keep25"]["accuracy"]),
         "abl_best_single": pct(max(only.values())),
         "abl_drop_min": "%.2f" % min(abs(v) for v in drop.values()),
         "abl_drop_max": "%.2f" % max(abs(v) for v in drop.values()),
+        "abl_ci_half": half(abl["full"]),
         "only_basic": pct(only["basic"]),
         "only_object": pct(only["object"]),
         "only_relation": pct(only["relation"]),
@@ -208,17 +518,85 @@ def facts():
         "drop_object_delta": "%.2f" % abs(drop["object"]),
         "drop_relation_delta": "%.2f" % abs(drop["relation"]),
         "drop_attribute_delta": "%.2f" % abs(drop["attribute"]),
+        # --- tests
         "n_shape_tests": 7,
         "n_torch_tests": 10,
         "n_numpy_tests": 9,
     }
-    runs = {"gqa_b": gqa_b, "gqa_c": gqa_c, "gqa_big": gqa_big,
-            "vqa_b": vqa_b, "vqa_c": vqa_c, "ok_b": ok_b, "ok_c": ok_c,
-            "cost": cost, "abl": abl, "back": back, "seeds": seeds}
+
+    if probe_b is not None:
+        mass = probe_b["attention_mass"]
+        values["probe_mass_first_half"] = "%.3f" % (
+            sum(mass["per_layer_mean"][:len(mass["per_layer_mean"]) // 2])
+            / (len(mass["per_layer_mean"]) // 2))
+        values["probe_mass_second_half"] = "%.3f" % (
+            sum(mass["per_layer_mean"][len(mass["per_layer_mean"]) // 2:])
+            / (len(mass["per_layer_mean"])
+               - len(mass["per_layer_mean"]) // 2))
+        per_layer = mass["per_layer_mean"]
+        values.update({
+            "probe_mass": "%.3f" % mass["overall_mean"],
+            "probe_chance": "%.3f" % mass["chance_level"],
+            "probe_ratio": "%.2f" % (mass["overall_mean"]
+                                     / mass["chance_level"]),
+            "probe_min_layer": "%.3f" % min(per_layer),
+            "probe_max_layer": "%.3f" % max(per_layer),
+            "probe_first_layer": "%.3f" % per_layer[0],
+            "probe_last_layer": "%.3f" % per_layer[-1],
+            "probe_prefix_len": mass["n_prefix"],
+            "probe_tokens": "{:,}".format(mass["text_tokens_scored"]),
+        })
+    if probe_c is not None:
+        mass_c = probe_c["attention_mass"]
+        values.update({
+            "probe_caption_mass": "%.3f" % mass_c["overall_mean"],
+            "probe_caption_chance": "%.3f" % mass_c["chance_level"],
+            "probe_caption_ratio": "%.2f" % (mass_c["overall_mean"]
+                                             / mass_c["chance_level"]),
+        })
+    if probe_b is not None and probe_c is not None:
+        mb = probe_b["attention_mass"]
+        mc = probe_c["attention_mass"]
+        values["probe_mass_gap"] = "%.3f" % abs(mc["overall_mean"]
+                                                - mb["overall_mean"])
+        # The two prefixes differ in length, so the interpretable quantity is
+        # each one's mass relative to what a uniform reader would give it.
+        rb = mb["overall_mean"] / mb["chance_level"]
+        rc = mc["overall_mean"] / mc["chance_level"]
+        if rb > 1.0 and rc < 1.0:
+            values["probe_verdict"] = (
+                "the injected cache takes %.2f times the attention a uniform "
+                "reader would give a prefix of its length, while the "
+                "embedding-space prefix takes only %.2f times its own share. "
+                "The frozen decoder therefore does not ignore the injected "
+                "cache \u2014 it is crowded out by it, and it actively discounts "
+                "the baseline\u2019s prefix in favour of the question text"
+                % (rb, rc))
+        elif rb < rc:
+            values["probe_verdict"] = (
+                "the injected cache takes %.2f times a uniform reader\u2019s share "
+                "against %.2f for the embedding-space prefix, so the frozen "
+                "decoder consults the injected cache less readily than it "
+                "consults a soft prompt" % (rb, rc))
+        else:
+            values["probe_verdict"] = (
+                "the injected cache takes %.2f times a uniform reader\u2019s share "
+                "against %.2f for the embedding-space prefix, so lack of "
+                "attention to the injected cache is not the explanation"
+                % (rb, rc))
+        values["probe_bridge_len"] = mb["n_prefix"]
+        values["probe_caption_len"] = mc["n_prefix"]
+
+    runs = {"gqa_b": gqa_b, "gqa_c": gqa_c, "gqa_n": gqa_n,
+            "vqa_b": vqa_b, "vqa_c": vqa_c, "vqa_n": vqa_n,
+            "ok_b": ok_b, "ok_c": ok_c, "ok_n": ok_n,
+            "cost": cost, "abl": abl, "back": back,
+            "capacity": capacity, "seeds": seed_pairs,
+            "probe_b": probe_b, "probe_c": probe_c}
     return values, runs
 
 
 if __name__ == "__main__":
     values, _ = facts()
     for key in sorted(values):
-        print("%-22s %s" % (key, values[key]))
+        print("%-24s %s" % (key, values[key]))

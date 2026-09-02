@@ -98,7 +98,13 @@ class StructurePreservingAttn(nn.Module):
         # 2D relative-position bias tables.  Each head has its own
         # bias indexed by (delta_row, delta_col).  We cover offsets
         # in [-max_offset, max_offset] in both axes.
-        self.max_offset = cfg.image_size // cfg.patch_size  # 16
+        # The bias is indexed by offsets on the *pooled* grid, not the raw
+        # patch grid: after pooling to n_visual tokens the grid is
+        # sqrt(n_visual) wide, so the largest possible offset is
+        # sqrt(n_visual) - 1.  Sizing the table by the raw 16x16 patch grid
+        # would leave most of it unused and the clipping inactive.
+        pooled_side = int(round(getattr(cfg, "n_visual", 36) ** 0.5))
+        self.max_offset = max(1, pooled_side - 1)
         # bias has shape (num_heads, 2 * max_offset + 1, 2 * max_offset + 1)
         self.bias = nn.Parameter(torch.zeros(
             self.attn_num_heads,

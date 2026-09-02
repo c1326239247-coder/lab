@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Collect the per-run JSON files into the tables used in the paper."""
+"""Print the paper's main tables from the per-run JSON files."""
 
 import io
 import json
@@ -10,7 +10,8 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import common
 
 ORDER = ["VQAv2", "OK-VQA", "GQA-spatial"]
-SYSTEMS = [("caption", "Caption-style projection (baseline)"),
+SYSTEMS = [("blind", "Question only (blind control)"),
+           ("caption", "Caption-style projection (baseline)"),
            ("bridge", "Cache-bridging (ours)")]
 
 
@@ -28,48 +29,73 @@ def short(dataset):
 
 def main():
     rows = {}
+    eval_size = None
     for dataset in ORDER:
         for system, _ in SYSTEMS:
-            tag = "%s_%s" % (short(dataset), system)
-            rows[(dataset, system)] = load(tag)
+            run = load("%s_%s" % (short(dataset), system))
+            rows[(dataset, system)] = run
+            if run is not None:
+                eval_size = run["config"]["eval_size"]
 
     print("")
-    print("Table: VQA accuracy (%), 400 held-out questions per dataset")
-    print("-" * 78)
-    header = "%-34s" % "System"
+    print("Table: VQA accuracy (%%) with 95%% bootstrap CI, %s held-out "
+          "questions per dataset" % eval_size)
+    print("-" * 92)
+    header = "%-36s" % "System"
     for dataset in ORDER:
-        header += "%14s" % dataset
+        header += "%18s" % dataset
     print(header)
     for system, label in SYSTEMS:
-        line = "%-34s" % label
+        line = "%-36s" % label
         for dataset in ORDER:
             run = rows.get((dataset, system))
-            line += "%14s" % ("--" if run is None else "%.2f" % run["accuracy"])
+            if run is None:
+                line += "%18s" % "--"
+            else:
+                block = run["accuracy_ci95"]
+                line += "%18s" % ("%.2f +/-%.2f" % (block["mean"],
+                                                    block["half_width"]))
         print(line)
 
     print("")
-    print("Table: control conditions (%)")
-    print("-" * 78)
-    print("%-34s%14s%14s%14s" % ("Condition", "VQAv2", "OK-VQA", "GQA-spatial"))
-    for key, label in [("accuracy", "correct image"),
-                       ("accuracy_shuffled_images", "mismatched image"),
-                       ("accuracy_no_visual", "visual cache disabled")]:
-        line = "%-34s" % label
-        for dataset in ORDER:
-            run = rows.get((dataset, "bridge"))
-            value = None if run is None else run.get(key)
-            line += "%14s" % ("--" if value is None else "%.2f" % value)
-        print(line)
+    print("Table: control conditions (%), paired bootstrap deltas")
+    print("-" * 92)
+    print("%-36s%18s%18s%18s" % ("Condition", "VQAv2", "OK-VQA",
+                                 "GQA-spatial"))
+    for system, label in [("bridge", "cache-bridging"),
+                          ("caption", "caption-style")]:
+        for key, name in [("accuracy", "correct image"),
+                          ("accuracy_shuffled_images", "mismatched image"),
+                          ("accuracy_no_visual", "visual pathway off")]:
+            line = "%-36s" % ("%s, %s" % (label, name))
+            for dataset in ORDER:
+                run = rows.get((dataset, system))
+                value = None if run is None else run.get(key)
+                line += "%18s" % ("--" if value is None else "%.2f" % value)
+            print(line)
+        for key, name in [("paired_delta_shuffled", "delta vs mismatched"),
+                          ("paired_delta_no_visual", "delta vs pathway off")]:
+            line = "%-36s" % ("  %s" % name)
+            for dataset in ORDER:
+                run = rows.get((dataset, system))
+                block = None if run is None else run.get(key)
+                if not block:
+                    line += "%18s" % "--"
+                else:
+                    line += "%18s" % ("%+.2f%s" % (
+                        block["delta"], "" if block["significant"] else " ns"))
+            print(line)
 
     print("")
-    print("Table: connector cost")
-    print("-" * 78)
-    print("%-34s%16s%14s%14s" % ("System", "params", "train (s)", "peak (GB)"))
+    print("Table: connector cost on GQA-spatial")
+    print("-" * 92)
+    print("%-36s%16s%14s%14s" % ("System", "params", "train (s)",
+                                 "peak (GB)"))
     for system, label in SYSTEMS:
         run = rows.get(("GQA-spatial", system))
         if run is None:
             continue
-        print("%-34s%16d%14.1f%14.2f" % (label, run["connector_params"],
+        print("%-36s%16d%14.1f%14.2f" % (label, run["connector_params"],
                                          run["train_seconds"],
                                          run["train_peak_mem_gb"]))
 
@@ -81,7 +107,8 @@ def main():
     if device is not None:
         print("")
         print("Hardware: %s (%s GB), torch %s, CUDA %s" % (
-            device["gpu"], device["vram_gb"], device["torch"], device["cuda"]))
+            device["gpu"], device["vram_gb"], device["torch"],
+            device["cuda"]))
 
 
 if __name__ == "__main__":

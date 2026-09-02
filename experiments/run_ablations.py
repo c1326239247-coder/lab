@@ -2,8 +2,10 @@
 """Ablations on the GQA spatial subset.
 
 Each variant changes exactly one component of the bridge and is trained
-with an identical budget so the accuracy delta is attributable to that
-component.
+with an identical budget, so the accuracy delta is attributable to that
+component.  The evaluation split is 2000 questions, the same as the main
+comparison, so ablation deltas can be read against a bootstrap interval
+of roughly +/-2 points rather than +/-4.
 """
 
 import os
@@ -13,7 +15,7 @@ PY = os.path.join(".venv", "Scripts", "python.exe")
 SCRIPT = os.path.join("experiments", "run_vqa.py")
 
 BASE = ["--dataset", "GQA-spatial", "--system", "bridge",
-        "--train-size", "3000", "--eval-size", "400",
+        "--train-size", "3000", "--eval-size", "2000",
         "--steps", "800", "--batch-size", "8", "--lr", "1e-3"]
 
 VARIANTS = [
@@ -21,6 +23,7 @@ VARIANTS = [
     ("abl_no_geometry", ["--no-geometry"]),
     ("abl_no_gate", ["--no-gate"]),
     ("abl_gate_fixed", ["--gate-mode", "fixed"]),
+    ("abl_per_layer_scale", ["--per-layer-scale"]),
     ("abl_only_basic", ["--layer-mask", "1,0,0,0"]),
     ("abl_only_object", ["--layer-mask", "0,1,0,0"]),
     ("abl_only_relation", ["--layer-mask", "0,0,1,0"]),
@@ -36,6 +39,9 @@ VARIANTS = [
 
 def main():
     for tag, extra in VARIANTS:
+        if os.path.exists(os.path.join("results", "run_%s.json" % tag)):
+            print("=== %s (already present, skipped) ===" % tag, flush=True)
+            continue
         print("=== %s ===" % tag, flush=True)
         subprocess.run([PY, SCRIPT] + BASE + extra + ["--tag", tag], check=True)
     print("ALL ABLATIONS DONE", flush=True)

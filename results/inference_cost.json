@@ -8,44 +8,64 @@
   },
   "variants": [
     {
-      "latency_ms_mean": 122.9,
-      "latency_ms_median": 123.5,
-      "peak_mem_gb": 2.66,
+      "latency_ms_mean": 199.4,
+      "latency_ms_std": 51.1,
+      "latency_ms_median": 191.7,
+      "peak_mem_gb": 2.674,
+      "peak_mem_bytes": 2871565312,
       "n_measured": 60,
-      "system": "text only (no visual pathway)",
-      "connector_params": 825507
+      "system": "question only (blind control)",
+      "connector_params": 51200
     },
     {
-      "latency_ms_mean": 123.0,
-      "latency_ms_median": 123.0,
-      "peak_mem_gb": 2.66,
+      "latency_ms_mean": 247.6,
+      "latency_ms_std": 64.3,
+      "latency_ms_median": 229.8,
+      "peak_mem_gb": 2.688,
+      "peak_mem_bytes": 2885900288,
+      "n_measured": 60,
+      "system": "cache-bridging, cache disabled",
+      "connector_params": 821635
+    },
+    {
+      "latency_ms_mean": 213.5,
+      "latency_ms_std": 52.4,
+      "latency_ms_median": 203.9,
+      "peak_mem_gb": 2.688,
+      "peak_mem_bytes": 2885785600,
       "n_measured": 60,
       "system": "caption-style projection",
       "connector_params": 6299648
     },
     {
-      "latency_ms_mean": 126.3,
-      "latency_ms_median": 126.2,
-      "peak_mem_gb": 2.66,
+      "latency_ms_mean": 225.3,
+      "latency_ms_std": 54.2,
+      "latency_ms_median": 209.2,
+      "peak_mem_gb": 2.69,
+      "peak_mem_bytes": 2888005632,
       "n_measured": 60,
       "system": "cache-bridging, full cache",
-      "connector_params": 825507
+      "connector_params": 821635
     },
     {
-      "latency_ms_mean": 125.9,
-      "latency_ms_median": 125.7,
-      "peak_mem_gb": 2.66,
+      "latency_ms_mean": 233.6,
+      "latency_ms_std": 67.2,
+      "latency_ms_median": 217.7,
+      "peak_mem_gb": 2.692,
+      "peak_mem_bytes": 2890110976,
       "n_measured": 60,
       "system": "cache-bridging, 50% top-K",
-      "connector_params": 825507
+      "connector_params": 821635
     },
     {
-      "latency_ms_mean": 127.1,
-      "latency_ms_median": 126.8,
-      "peak_mem_gb": 2.66,
+      "latency_ms_mean": 193.2,
+      "latency_ms_std": 25.0,
+      "latency_ms_median": 188.7,
+      "peak_mem_gb": 2.694,
+      "peak_mem_bytes": 2892216320,
       "n_measured": 60,
       "system": "cache-bridging, 25% top-K",
-      "connector_params": 825507
+      "connector_params": 821635
     }
   ]
 }

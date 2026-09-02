@@ -44,7 +44,14 @@ def load_backbones():
 def build_system(kind, clip, llm, cfg, **kwargs):
     if kind == "caption":
         return M.CaptionBaseline(clip, llm, cfg).cuda().to(DTYPE)
-    return M.CacheBridgeVQA(clip, llm, cfg, **kwargs).cuda().to(DTYPE)
+    if kind == "blind":
+        return M.BlindBaseline(clip, llm, cfg).cuda().to(DTYPE)
+    system = M.CacheBridgeVQA(clip, llm, cfg, **kwargs).cuda().to(DTYPE)
+    if getattr(system, "layer_scales", None) is not None:
+        # bfloat16 cannot represent small updates around 1.0, so the
+        # per-layer scalars are kept in fp32 and cast at use time.
+        system.layer_scales.data = system.layer_scales.data.float()
+    return system
 
 
 class Batcher(object):
@@ -139,6 +146,7 @@ def evaluate(system, batcher, rows, tok, batch_size=8, max_new_tokens=6,
     """
     total = 0.0
     samples = []
+    per_question = []
     images = image_source if image_source is not None else rows
     for start in range(0, len(rows), batch_size):
         chunk = rows[start:start + batch_size]
@@ -152,12 +160,13 @@ def evaluate(system, batcher, rows, tok, batch_size=8, max_new_tokens=6,
             pred = pred.split(".")[0].split(",")[0].strip()
             score = common.vqa_accuracy(pred, row["answers"])
             total += score
+            per_question.append(score)
             if len(samples) < 12:
                 samples.append({"question": row["question"],
                                 "prediction": pred,
                                 "gold": row["answers"][0],
                                 "score": score})
-    return 100.0 * total / max(1, len(rows)), samples
+    return 100.0 * total / max(1, len(rows)), samples, per_question
 
 
 def main():
@@ -178,6 +187,9 @@ def main():
     ap.add_argument("--gate-mode", default="learned",
                     choices=["learned", "fixed"])
     ap.add_argument("--layer-mask", default="")
+    ap.add_argument("--per-layer-scale", action="store_true",
+                    help="learn one K and one V scalar per decoder layer "
+                         "instead of feeding all layers the same cache")
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--tag", default="")
     args = ap.parse_args()
@@ -196,7 +208,7 @@ def main():
     batcher = Batcher(tok, proc)
 
     kwargs = {}
-    if args.system != "caption":
+    if args.system not in ("caption", "blind"):
         mask = None
         if args.layer_mask:
             mask = [float(x) for x in args.layer_mask.split(",")]
@@ -205,8 +217,9 @@ def main():
                   "use_gate": not args.no_gate,
                   "gate_mode": args.gate_mode,
                   "layer_mask": mask,
-                  "keep_ratio": args.keep_ratio}
-    if args.system != "caption":
+                  "keep_ratio": args.keep_ratio,
+                  "per_layer_scale": args.per_layer_scale}
+    if args.system not in ("caption", "blind"):
         probe = batcher.train_batch(train_rows[:4])
         k_std, v_std = M.calibrate_kv_stats(
             cfg, llm, llm.get_input_embeddings()(probe[1]))
@@ -223,20 +236,31 @@ def main():
 
     torch.cuda.reset_peak_memory_stats()
     t0 = time.time()
-    acc, samples = evaluate(system, batcher, eval_rows, tok)
+    acc, samples, scores = evaluate(system, batcher, eval_rows, tok)
     eval_secs = time.time() - t0
     eval_mem = torch.cuda.max_memory_allocated() / 1024 ** 3
 
     # Control conditions: the same trained weights scored with mismatched
-    # images, and (for the bridge) with the visual cache switched off.
+    # images, and with the visual pathway switched off.  Both systems now
+    # support the second control, so the comparison is symmetric.
     rotated = eval_rows[1:] + eval_rows[:1]
-    acc_shuffled, _ = evaluate(system, batcher, eval_rows, tok,
-                               image_source=rotated)
-    acc_novisual = None
-    if args.system != "caption":
+    if args.system == "blind":
+        # No visual pathway exists, so both controls coincide with the
+        # main score by construction.
+        acc_shuffled, scores_shuffled = acc, scores
+        acc_novisual, scores_novisual = acc, scores
+    elif args.system == "caption":
+        acc_shuffled, _, scores_shuffled = evaluate(system, batcher, eval_rows,
+                                                   tok, image_source=rotated)
+        system.use_visual = False
+        acc_novisual, _, scores_novisual = evaluate(system, batcher, eval_rows, tok)
+        system.use_visual = True
+    else:
+        acc_shuffled, _, scores_shuffled = evaluate(system, batcher, eval_rows,
+                                                   tok, image_source=rotated)
         keep = system.layer_mask
         system.layer_mask = [0.0, 0.0, 0.0, 0.0]
-        acc_novisual, _ = evaluate(system, batcher, eval_rows, tok)
+        acc_novisual, _, scores_novisual = evaluate(system, batcher, eval_rows, tok)
         system.layer_mask = keep
 
     payload = {
@@ -248,18 +272,39 @@ def main():
         "device": common.device_report(),
         "connector_params": n_params,
         "accuracy": round(acc, 2),
+        "accuracy_ci95": common.bootstrap_ci(scores),
         "accuracy_shuffled_images": round(acc_shuffled, 2),
-        "accuracy_no_visual": (None if acc_novisual is None
-                               else round(acc_novisual, 2)),
+        "accuracy_shuffled_ci95": common.bootstrap_ci(scores_shuffled),
+        "accuracy_no_visual": round(acc_novisual, 2),
+        "accuracy_no_visual_ci95": common.bootstrap_ci(scores_novisual),
+        "paired_delta_shuffled": common.paired_delta_ci(scores, scores_shuffled),
+        "paired_delta_no_visual": common.paired_delta_ci(scores, scores_novisual),
+        "per_question_scores": scores,
         "train_seconds": round(train_secs, 1),
         "train_peak_mem_gb": round(train_mem, 2),
         "eval_seconds": round(eval_secs, 1),
         "eval_peak_mem_gb": round(eval_mem, 2),
+        "layer_scales": ([[round(float(x), 4) for x in row]
+                          for row in system.layer_scales.detach().float().cpu()]
+                         if getattr(system, "layer_scales", None) is not None
+                         else None),
         "loss_first_25": round(sum(history[:25]) / min(25, len(history)), 4),
         "loss_last_25": round(sum(history[-25:]) / min(25, len(history)), 4),
         "samples": samples,
     }
     tag = args.tag or "%s_%s" % (args.dataset.replace("-", ""), args.system)
+    # Keep the trained connector so the diagnostic probes (attention mass,
+    # per-layer KV statistics) analyse exactly the evaluated weights instead
+    # of a freshly trained copy.
+    ckpt_dir = os.path.join(common.REPO_ROOT, "checkpoints")
+    os.makedirs(ckpt_dir, exist_ok=True)
+    ckpt_path = os.path.join(ckpt_dir, "%s.pt" % tag)
+    torch.save({"tag": tag, "config": vars(args),
+                "state": {k: v.detach().float().cpu()
+                          for k, v in system.state_dict().items()
+                          if not k.startswith(("clip.", "llm."))}},
+               ckpt_path)
+    payload["checkpoint"] = os.path.relpath(ckpt_path, common.REPO_ROOT)
     path = common.save_json("run_%s.json" % tag, payload)
     print(json.dumps({k: v for k, v in payload.items() if k != "samples"},
                      indent=2), flush=True)
