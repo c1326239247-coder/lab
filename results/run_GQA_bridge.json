@@ -19,6 +19,7 @@
     "keep_ratio": 1.0,
     "no_geometry": false,
     "no_gate": false,
+    "gate_mode": "learned",
     "layer_mask": "",
     "seed": 0,
     "tag": "GQA_bridge"
@@ -31,15 +32,15 @@
     "cuda": "12.8"
   },
   "connector_params": 825507,
-  "accuracy": 19.5,
-  "accuracy_shuffled_images": 14.0,
+  "accuracy": 21.0,
+  "accuracy_shuffled_images": 16.0,
   "accuracy_no_visual": 15.25,
-  "train_seconds": 585.8,
+  "train_seconds": 381.4,
   "train_peak_mem_gb": 3.41,
-  "eval_seconds": 19.5,
+  "eval_seconds": 18.6,
   "eval_peak_mem_gb": 2.72,
-  "loss_first_25": 10.3454,
-  "loss_last_25": 0.4428,
+  "loss_first_25": 10.3495,
+  "loss_last_25": 0.3908,
   "samples": [
     {
       "question": "Is the catcher on the left side?",
@@ -61,19 +62,19 @@
     },
     {
       "question": "Which side of the image is the beige car on?",
-      "prediction": "right",
+      "prediction": "",
       "gold": "left",
       "score": 0.0
     },
     {
       "question": "What is the girl wearing?",
-      "prediction": "girl",
+      "prediction": "blank",
       "gold": "glasses",
       "score": 0.0
     },
     {
       "question": "What does the woman hold?",
-      "prediction": "paper",
+      "prediction": "bag",
       "gold": "handbag",
       "score": 0.0
     },
@@ -97,7 +98,7 @@
     },
     {
       "question": "What color is the shirt the person is playing?",
-      "prediction": "shirt",
+      "prediction": "white",
       "gold": "black",
       "score": 0.0
     },
@@ -109,7 +110,7 @@
     },
     {
       "question": "What is using the spices?",
-      "prediction": "shices",
+      "prediction": "dices",
       "gold": "blender",
       "score": 0.0
     }

@@ -34,9 +34,10 @@ def facts():
     cost = load("inference_cost.json")
     back = load("backbone_params.json")
     abl = dict((tag, load("run_abl_%s.json" % tag)) for tag in
-               ["full", "no_geometry", "no_gate", "drop_basic", "drop_object",
-                "drop_relation", "drop_attribute", "only_basic", "only_object",
-                "only_relation", "only_attribute", "keep50", "keep25"])
+               ["full", "no_geometry", "no_gate", "gate_fixed", "drop_basic",
+                "drop_object", "drop_relation", "drop_attribute", "only_basic",
+                "only_object", "only_relation", "only_attribute", "keep50",
+                "keep25"])
 
     cfg = gqa_b["config"]
     dev = gqa_b["device"]
@@ -72,6 +73,21 @@ def facts():
                          " for the baseline and the bridge respectively.")
     else:
         seed_sentence = ""
+
+    # Same-seed repeat runs of the bridge.  adaptive_avg_pool2d has a
+    # non-deterministic CUDA backward, so an identical configuration does
+    # not reproduce bit-for-bit; we measure the spread instead of hiding it.
+    repeat_paths = ["run_GQA_bridge.json", "run_GQA_bridge_rerun2.json",
+                    "run_GQA_bridge_rerun3.json"]
+    repeats = [load(name)["accuracy"] for name in repeat_paths
+               if os.path.exists(os.path.join(RESULTS, name))]
+    repeat_spread = (max(repeats) - min(repeats)) if len(repeats) > 1 else 0.0
+    bridge_all = repeats + [
+        load("run_GQA_bridge_seed%d.json" % s_)["accuracy"] for s_ in [1, 2]
+        if os.path.exists(os.path.join(RESULTS, "run_GQA_bridge_seed%d.json" % s_))]
+    caption_all = [gqa_c["accuracy"]] + [
+        load("run_GQA_caption_seed%d.json" % s_)["accuracy"] for s_ in [1, 2]
+        if os.path.exists(os.path.join(RESULTS, "run_GQA_caption_seed%d.json" % s_))]
 
     gqa_big_acc = gqa_big["accuracy"]
     if abs(gqa_big_acc - gqa_b["accuracy"]) < 1e-9:
@@ -162,6 +178,22 @@ def facts():
         "abl_full": pct(abl_full),
         "abl_gate": pct(abl["no_gate"]["accuracy"]),
         "abl_gate_delta": "%.2f" % (abl_full - abl["no_gate"]["accuracy"]),
+        "abl_gate_params": "{:,}".format(abl["no_gate"]["connector_params"]),
+        "abl_gate_fixed": pct(abl["gate_fixed"]["accuracy"]),
+        "abl_gate_fixed_params": "{:,}".format(abl["gate_fixed"]["connector_params"]),
+        "abl_gate_fixed_delta": "%.2f" % (abl_full - abl["gate_fixed"]["accuracy"]),
+        "abl_novis": pct(abl["full"]["accuracy_no_visual"]),
+        "n_repeats": "%d" % len(repeats),
+        "repeat_spread": "%.2f" % repeat_spread,
+        "repeat_min": pct(min(repeats)),
+        "repeat_max": pct(max(repeats)),
+        "bridge_mean": pct(sum(bridge_all) / len(bridge_all)),
+        "bridge_max": pct(max(bridge_all)),
+        "caption_mean": pct(sum(caption_all) / len(caption_all)),
+        "caption_min": pct(min(caption_all)),
+        "worst_case_gap": "%.2f" % (min(caption_all) - max(bridge_all)),
+        "n_bridge_runs": "%d" % len(bridge_all),
+        "n_caption_runs": "%d" % len(caption_all),
         "abl_geo_delta": "%.2f" % (abl_full - abl["no_geometry"]["accuracy"]),
         "abl_keep50_delta": "%.2f" % (abl_full - abl["keep50"]["accuracy"]),
         "abl_keep25_delta": "%.2f" % (abl_full - abl["keep25"]["accuracy"]),

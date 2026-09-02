@@ -20,6 +20,7 @@ ABLATIONS = [
     ("abl_full", "Full bridge (all four levels)"),
     ("abl_no_geometry", "without 2D geometry bias"),
     ("abl_no_gate", "without adaptive gate"),
+    ("abl_gate_fixed", "gate fixed to even blend (matched params)"),
     ("abl_drop_basic", "without basic level"),
     ("abl_drop_object", "without semantic-object level"),
     ("abl_drop_relation", "without spatial-relation level"),

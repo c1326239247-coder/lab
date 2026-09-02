@@ -20,6 +20,7 @@ VARIANTS = [
     ("abl_full", []),
     ("abl_no_geometry", ["--no-geometry"]),
     ("abl_no_gate", ["--no-gate"]),
+    ("abl_gate_fixed", ["--gate-mode", "fixed"]),
     ("abl_only_basic", ["--layer-mask", "1,0,0,0"]),
     ("abl_only_object", ["--layer-mask", "0,1,0,0"]),
     ("abl_only_relation", ["--layer-mask", "0,0,1,0"]),

@@ -175,6 +175,8 @@ def main():
     ap.add_argument("--keep-ratio", type=float, default=1.0)
     ap.add_argument("--no-geometry", action="store_true")
     ap.add_argument("--no-gate", action="store_true")
+    ap.add_argument("--gate-mode", default="learned",
+                    choices=["learned", "fixed"])
     ap.add_argument("--layer-mask", default="")
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--tag", default="")
@@ -201,6 +203,7 @@ def main():
         kwargs = {"inject_mode": args.inject_mode,
                   "use_geometry": not args.no_geometry,
                   "use_gate": not args.no_gate,
+                  "gate_mode": args.gate_mode,
                   "layer_mask": mask,
                   "keep_ratio": args.keep_ratio}
     if args.system != "caption":

@@ -207,11 +207,13 @@ class BridgeAdapter(nn.Module):
     exist so the ablations can disable one stage at a time.
     """
 
-    def __init__(self, cfg, use_geometry=True, use_gate=True):
+    def __init__(self, cfg, use_geometry=True, use_gate=True,
+                 gate_mode="learned"):
         super(BridgeAdapter, self).__init__()
         self.cfg = cfg
         self.use_geometry = use_geometry
         self.use_gate = use_gate
+        self.gate_mode = gate_mode
         self.proj_k = DimensionProjection(cfg)
         self.proj_v = DimensionProjection(cfg)
         if use_geometry:
@@ -222,7 +224,14 @@ class BridgeAdapter(nn.Module):
             self.flat_k = nn.Linear(cfg.language_dim, cfg.language_dim, bias=False)
             self.flat_v = nn.Linear(cfg.language_dim, cfg.language_dim, bias=False)
         if use_gate:
-            self.gate = AdaptiveGating(cfg)
+            # gate_mode "learned" is the full adaptive gate.  gate_mode
+            # "fixed" keeps the prompt-summary projection but replaces the
+            # learned per-token coefficient by a constant 0.5 blend, which
+            # isolates the effect of *adaptive* gating from the parameters
+            # the gate brings with it (the equal-capacity control of
+            # Section 4.5).
+            if gate_mode == "learned":
+                self.gate = AdaptiveGating(cfg)
             self.summary_proj = nn.Linear(cfg.hidden_size, cfg.language_dim,
                                           bias=False)
         self.level_scale = nn.Parameter(torch.ones(len(LAYER_NAMES)))
@@ -250,8 +259,12 @@ class BridgeAdapter(nn.Module):
                 v = v + self.flat_v(v)
             if self.use_gate:
                 summary = self.summary_proj(text_summary)
-                k = self.gate(k, summary)
-                v = self.gate(v, summary)
+                if self.gate_mode == "fixed":
+                    k = 0.5 * k + 0.5 * summary
+                    v = 0.5 * v + 0.5 * summary
+                else:
+                    k = self.gate(k, summary)
+                    v = self.gate(v, summary)
             k = k * self.level_scale[i]
             v = v * self.level_scale[i]
             keys.append(k)
@@ -278,14 +291,16 @@ class CacheBridgeVQA(nn.Module):
     mode = "bridge"
 
     def __init__(self, clip, llm, cfg, inject_mode="prepend",
-                 use_geometry=True, use_gate=True, layer_mask=None,
+                 use_geometry=True, use_gate=True, gate_mode="learned",
+                 layer_mask=None,
                  keep_ratio=1.0):
         super(CacheBridgeVQA, self).__init__()
         self.clip = clip
         self.llm = llm
         self.cfg = cfg
         self.extractor = HierarchicalCacheExtractor(cfg, clip)
-        self.bridge = BridgeAdapter(cfg, use_geometry, use_gate)
+        self.bridge = BridgeAdapter(cfg, use_geometry, use_gate,
+                                    gate_mode)
         self.inject_mode = inject_mode
         self.layer_mask = layer_mask
         self.keep_ratio = keep_ratio

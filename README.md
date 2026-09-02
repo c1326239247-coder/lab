@@ -13,11 +13,20 @@ Both backbones stay frozen; only the bridge (825,507 parameters, 0.059% of the
 
 **Headline result, reported honestly.** Under an identical training budget the
 bridge does *not* beat the much simpler caption-style projection connector it
-was designed to replace (GQA-spatial 19.50% against 34.25%). Visual information
-does reach the language model through the KV pathway - accuracy falls to 14.00%
-with mismatched images and 15.25% with the cache disabled - and the shortfall
-is not a capacity effect, since a 2.39x larger bridge scores identically. Every
-number in the paper can be regenerated from this repository.
+was designed to replace: over repeated runs on GQA-spatial the bridge averages
+20.65% against the baseline's 36.67%, and even the best bridge run stays 11.75
+points below the weakest baseline run. Visual information does reach the language
+model through the KV pathway - accuracy falls by about 5 points with mismatched
+images and to 15.25% with the cache disabled - and the shortfall is not a
+capacity effect, since a 2.4x larger bridge is indistinguishable from the small
+one. Every number in the paper can be regenerated from this repository.
+
+**On reproducibility.** `F.adaptive_avg_pool2d`, which builds the hierarchical
+cache, has a non-deterministic CUDA backward, so bridge runs are *not*
+bit-reproducible: three repeats of the same seed and configuration gave 19.50%,
+21.00% and 22.50%. The caption baseline, which does not use that op in its
+trainable path, does reproduce exactly. Treat any single-run difference below
+about three points as noise - the paper says the same.
 
 ## Repository layout
 
@@ -76,7 +85,8 @@ already defaults to one.
 # Section 4.7: seed repeats
 .\.venv\Scripts\python.exe experiments\run_seeds.py
 
-# Table 5, Figure 6: ablations
+# Table 5, Figure 6: ablations (14 variants, including the matched-parameter
+# gate control that separates the gate mechanism from the parameters it carries)
 .\.venv\Scripts\python.exe experiments\run_ablations.py
 
 # Table 4: inference cost
@@ -113,6 +123,10 @@ Four details cost real debugging time and are discussed in Section 5 of the pape
 - **Keys and values must be normalised separately.** The host cache has
   k_std 2.29 and v_std 0.22; normalising the two jointly destroys the visual
   signal completely.
+- **Ablating the gate also removes its parameters.** `--no-gate` drops the
+  bridge from 825,507 to 300,684 trainable parameters, so it confounds the
+  mechanism with capacity. Use `--gate-mode fixed` for the matched-parameter
+  control (824,972 parameters, learned coefficient replaced by a fixed blend).
 - **Position ids must be `cumsum(mask) - 1`**, not a plain `arange`, or
   variable-length batches get positions that do not match the tokens.
 - **Prompts must be left-padded at generation time**, otherwise the model

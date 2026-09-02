@@ -177,7 +177,8 @@ def build_tables(values, runs):
     base = abl["full"]["accuracy"]
     rows = [("full", "Full bridge, all four levels"),
             ("no_geometry", "without the 2D geometry bias"),
-            ("no_gate", "without the adaptive gate"),
+            ("no_gate", "without the gate (parameters removed with it)"),
+            ("gate_fixed", "gate fixed to an even blend (matched parameters)"),
             ("drop_basic", "without the basic level"),
             ("drop_object", "without the semantic-object level"),
             ("drop_relation", "without the spatial-relation level"),
