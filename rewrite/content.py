@@ -891,8 +891,8 @@ CODE_AVAILABILITY = (
     "The source code, configuration files, raw results, and experimental "
     "reproduction scripts supporting this study are publicly available at "
     "https://github.com/c1326239247-coder/lab, tagged revision-2026-11. A "
-    "versioned archive with a DOI in a DOI-assigning repository will be linked "
-    "at this location before resubmission."
+    "versioned archive is deposited in Zenodo and citable at "
+    "https://doi.org/10.5281/zenodo.23974490."
 )
 
 COMPETING_INTERESTS = (

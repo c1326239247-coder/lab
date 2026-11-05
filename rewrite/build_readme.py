@@ -254,8 +254,9 @@ Discussed in Sections 3.5, 5.1 and 5.2 of the paper:
 }}
 ```
 
-A DOI for this revision will be added here once the versioned archive is
-published in a DOI-assigning repository.
+The archived release is citable at
+[10.5281/zenodo.23974490](https://doi.org/10.5281/zenodo.23974490), which
+deposits the GitHub zip-ball of the tag `revision-2026-11`.
 
 ## License
 

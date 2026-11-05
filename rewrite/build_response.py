@@ -105,10 +105,9 @@ def items():
               "Data Availability. The corrected code, raw results, and "
               "reproduction scripts are now public at "
               "https://github.com/c1326239247-coder/lab under the tag "
-              "revision-2026-11. The remaining step is the versioned Zenodo "
-              "archive and its DOI, which will be inserted at the reserved "
-              "location before resubmission; we do not represent that "
-              "deposition as complete."),
+              "revision-2026-11. That release is now deposited in Zenodo and "
+              "citable at https://doi.org/10.5281/zenodo.23974490, and the "
+              "Code Availability section quotes the same DOI."),
         ("H1", "Reviewer 1"),
         ("H2", "1. Uniform prefix burden and DynamicKV"),
         ("P", "Response: Sections 2.3, 4.8, and 5.3 now cite and discuss "
