@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """Measure single-sample inference cost for each connector design.
 
-Reported numbers are wall-clock latency for one greedy answer (6 new
+Reported numbers are wall-clock latency for one greedy answer (up to 6 new
 tokens) and the peak allocated GPU memory of that forward pass, averaged
 over `--repeats` questions after a warm-up.
 """
@@ -62,30 +62,41 @@ def main():
     clip, llm, tok, proc = R.load_backbones()
     cfg = M.BridgeCfg(clip, llm, n_visual=args.n_visual)
     batcher = R.Batcher(tok, proc)
-    rows = common.load_gqa(args.repeats + 20)
+    rows = common.load_gqa(5000)
+    measurement_rows = rows[:args.repeats + 20]
 
-    probe = batcher.train_batch(rows[:4])
-    M.calibrate_kv_stats(cfg, llm, llm.get_input_embeddings()(probe[1]))
+    _, ids, mask, _ = batcher.train_batch(rows[2000:2004])
+    M.calibrate_kv_stats(cfg, llm, llm.get_input_embeddings()(ids))
 
     variants = [
         ("question only (blind control)",
-         R.build_system("blind", clip, llm, cfg)),
+         R.build_system("blind", clip, llm, cfg), "GQA_blind"),
         ("cache-bridging, cache disabled",
-         R.build_system("bridge", clip, llm, cfg, layer_mask=[0, 0, 0, 0])),
+         R.build_system("bridge", clip, llm, cfg,
+                        layer_mask=[0, 0, 0, 0]), "GQA_bridge"),
         ("caption-style projection",
-         R.build_system("caption", clip, llm, cfg)),
+         R.build_system("caption", clip, llm, cfg), "GQA_caption"),
         ("cache-bridging, full cache",
-         R.build_system("bridge", clip, llm, cfg)),
+         R.build_system("bridge", clip, llm, cfg), "GQA_bridge"),
         ("cache-bridging, 50% top-K",
-         R.build_system("bridge", clip, llm, cfg, keep_ratio=0.5)),
+         R.build_system("bridge", clip, llm, cfg,
+                        keep_ratio=0.5), "abl_keep50"),
         ("cache-bridging, 25% top-K",
-         R.build_system("bridge", clip, llm, cfg, keep_ratio=0.25)),
+         R.build_system("bridge", clip, llm, cfg,
+                        keep_ratio=0.25), "abl_keep25"),
     ]
 
     report = {"device": common.device_report(), "variants": []}
-    for label, system in variants:
+    for label, system, checkpoint in variants:
+        blob = torch.load(os.path.join("checkpoints", checkpoint + ".pt"),
+                          map_location="cpu", weights_only=False)
+        missing, unexpected = system.load_state_dict(blob["state"], strict=False)
+        missing_trained = [key for key in blob["state"] if key in missing]
+        if missing_trained or unexpected:
+            raise RuntimeError("checkpoint/state mismatch for %s" % checkpoint)
         system.eval()
-        stats = measure(system, batcher, rows, args.repeats)
+        stats = measure(system, batcher, measurement_rows, args.repeats)
+        stats["checkpoint"] = "checkpoints/%s.pt" % checkpoint
         stats["system"] = label
         n_params = sum(p.numel() for p in system.trainable_parameters())
         stats["connector_params"] = n_params

@@ -33,7 +33,12 @@ DTYPE = torch.bfloat16
 
 def load_backbones():
     clip = CLIPVisionModel.from_pretrained(common.CLIP_ID, dtype=DTYPE).cuda().eval()
-    llm = AutoModelForCausalLM.from_pretrained(common.LLM_ID, dtype=DTYPE).cuda().eval()
+    if (getattr(common, "LLM_CONFIG", None) or {}).get("quantization_config"):
+        llm = AutoModelForCausalLM.from_pretrained(
+            common.LLM_ID, dtype=DTYPE, device_map="cuda").eval()
+    else:
+        llm = AutoModelForCausalLM.from_pretrained(
+            common.LLM_ID, dtype=DTYPE).cuda().eval()
     tok = AutoTokenizer.from_pretrained(common.LLM_ID)
     tok.pad_token = tok.eos_token
     tok.padding_side = "right"
@@ -43,9 +48,11 @@ def load_backbones():
 
 def build_system(kind, clip, llm, cfg, **kwargs):
     if kind == "caption":
-        return M.CaptionBaseline(clip, llm, cfg).cuda().to(DTYPE)
+        return M.CaptionBaseline(clip, llm, cfg,
+                                 n_visual=cfg.n_visual).cuda().to(DTYPE)
     if kind == "blind":
-        return M.BlindBaseline(clip, llm, cfg).cuda().to(DTYPE)
+        return M.BlindBaseline(clip, llm, cfg,
+                               n_visual=cfg.n_visual).cuda().to(DTYPE)
     system = M.CacheBridgeVQA(clip, llm, cfg, **kwargs).cuda().to(DTYPE)
     if getattr(system, "layer_scales", None) is not None:
         # bfloat16 cannot represent small updates around 1.0, so the
@@ -67,7 +74,7 @@ class Batcher(object):
         px = self.proc(images=images, return_tensors="pt")["pixel_values"]
         return px.cuda().to(DTYPE)
 
-    def train_batch(self, rows):
+    def train_batch(self, rows, return_prompt_mask=False):
         """Prompt + gold answer, with the loss masked to the answer span."""
         prompts, fulls = [], []
         for row in rows:
@@ -85,6 +92,10 @@ class Batcher(object):
         for i, prompt in enumerate(prompts):
             n = len(self.tok(prompt, add_special_tokens=True)["input_ids"])
             labels[i, :n] = -100
+        prompt_mask = mask.clone()
+        prompt_mask[labels != -100] = 0
+        if return_prompt_mask:
+            return self.pixels(rows), ids, mask, labels, prompt_mask
         return self.pixels(rows), ids, mask, labels
 
     def eval_batch(self, rows):
@@ -113,8 +124,9 @@ def train(system, batcher, rows, steps, batch_size, lr, log_every=25,
         while len(batch) < batch_size:
             batch.append(rows[cursor % len(rows)])
             cursor += 1
-        px, ids, mask, labels = batcher.train_batch(batch)
-        loss = system(px, ids, mask, labels)
+        px, ids, mask, labels, prompt_mask = batcher.train_batch(
+            batch, return_prompt_mask=True)
+        loss = system(px, ids, mask, labels, prompt_mask=prompt_mask)
         loss.backward()
         torch.nn.utils.clip_grad_norm_(params, 1.0)
         opt.step()
@@ -190,11 +202,24 @@ def main():
     ap.add_argument("--per-layer-scale", action="store_true",
                     help="learn one K and one V scalar per decoder layer "
                          "instead of feeding all layers the same cache")
+    ap.add_argument("--bridge-kv-scale", type=float, default=1.0,
+                    help="directly multiply both bridged K and V before "
+                         "injection; used for the attention-allocation sweep")
+    ap.add_argument("--llm-id", default=common.LLM_ID,
+                    help="optional alternate decoder, e.g. a local 4-bit "
+                         "Mistral-7B directory")
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--tag", default="")
     args = ap.parse_args()
 
     common.set_seed(args.seed)
+    common.LLM_ID = args.llm_id
+    llm_config_path = os.path.join(args.llm_id, "config.json")
+    if os.path.isfile(llm_config_path):
+        common.LLM_CONFIG = json.load(io.open(llm_config_path,
+                                              encoding="utf-8"))
+    else:
+        common.LLM_CONFIG = {}
     print("device:", common.device_report(), flush=True)
 
     rows = common.DATASETS[args.dataset](args.train_size + args.eval_size)
@@ -218,7 +243,8 @@ def main():
                   "gate_mode": args.gate_mode,
                   "layer_mask": mask,
                   "keep_ratio": args.keep_ratio,
-                  "per_layer_scale": args.per_layer_scale}
+                  "per_layer_scale": args.per_layer_scale,
+                  "bridge_kv_scale": args.bridge_kv_scale}
     if args.system not in ("caption", "blind"):
         probe = batcher.train_batch(train_rows[:4])
         k_std, v_std = M.calibrate_kv_stats(
@@ -266,6 +292,7 @@ def main():
     payload = {
         "host_kv_stats": {"k_std": round(cfg.k_std, 4),
                           "v_std": round(cfg.v_std, 4)},
+        "llm_id": args.llm_id,
         "dataset": args.dataset,
         "system": args.system,
         "config": vars(args),

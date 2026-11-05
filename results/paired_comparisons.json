@@ -1,0 +1,131 @@
+{
+  "n_boot": 10000,
+  "comparisons": {
+    "VQAv2_caption_minus_bridge": {
+      "delta": 5.85,
+      "low": 3.6,
+      "high": 8.15,
+      "significant": true,
+      "n": 2000,
+      "left": "VQAv2_caption",
+      "right": "VQAv2_bridge"
+    },
+    "VQAv2_bridge_minus_blind": {
+      "delta": -4.35,
+      "low": -6.7,
+      "high": -2.05,
+      "significant": true,
+      "n": 2000,
+      "left": "VQAv2_bridge",
+      "right": "VQAv2_blind"
+    },
+    "OKVQA_caption_minus_bridge": {
+      "delta": 24.6,
+      "low": 22.68,
+      "high": 26.52,
+      "significant": true,
+      "n": 2000,
+      "left": "OKVQA_caption",
+      "right": "OKVQA_bridge"
+    },
+    "OKVQA_bridge_minus_blind": {
+      "delta": -21.28,
+      "low": -23.17,
+      "high": -19.43,
+      "significant": true,
+      "n": 2000,
+      "left": "OKVQA_bridge",
+      "right": "OKVQA_blind"
+    },
+    "GQA_caption_minus_bridge": {
+      "delta": 1.55,
+      "low": -0.8,
+      "high": 3.9,
+      "significant": false,
+      "n": 2000,
+      "left": "GQA_caption",
+      "right": "GQA_bridge"
+    },
+    "GQA_bridge_minus_blind": {
+      "delta": 6.2,
+      "low": 3.7,
+      "high": 8.75,
+      "significant": true,
+      "n": 2000,
+      "left": "GQA_bridge",
+      "right": "GQA_blind"
+    },
+    "capacity_best_minus_caption": {
+      "delta": 1.2,
+      "low": -1.15,
+      "high": 3.65,
+      "significant": false,
+      "n": 2000,
+      "left": "cap_rank128",
+      "right": "GQA_caption"
+    },
+    "prefix6_caption_minus_bridge": {
+      "delta": 3.2,
+      "low": 0.85,
+      "high": 5.55,
+      "significant": true,
+      "n": 2000,
+      "left": "prefix6_caption",
+      "right": "prefix6_bridge"
+    },
+    "prefix9_caption_minus_bridge": {
+      "delta": 4.1,
+      "low": 1.75,
+      "high": 6.45,
+      "significant": true,
+      "n": 2000,
+      "left": "prefix9_caption",
+      "right": "prefix9_bridge"
+    },
+    "prefix18_caption_minus_bridge": {
+      "delta": 6.0,
+      "low": 3.65,
+      "high": 8.35,
+      "significant": true,
+      "n": 2000,
+      "left": "prefix18_caption",
+      "right": "prefix18_bridge"
+    },
+    "prefix36_caption_minus_bridge": {
+      "delta": 1.5,
+      "low": -0.9,
+      "high": 3.9,
+      "significant": false,
+      "n": 2000,
+      "left": "prefix36_caption",
+      "right": "prefix36_bridge"
+    },
+    "kvscale05_minus_kvscale10": {
+      "delta": 2.5,
+      "low": 0.4,
+      "high": 4.7,
+      "significant": true,
+      "n": 2000,
+      "left": "kvscale05",
+      "right": "kvscale10"
+    },
+    "kvscale20_minus_kvscale10": {
+      "delta": -1.1,
+      "low": -2.9,
+      "high": 0.75,
+      "significant": false,
+      "n": 2000,
+      "left": "kvscale20",
+      "right": "kvscale10"
+    },
+    "Mistral7B_caption_minus_bridge": {
+      "delta": 38.25,
+      "low": 35.85,
+      "high": 40.65,
+      "significant": true,
+      "n": 2000,
+      "left": "Mistral7B_GQA_caption",
+      "right": "Mistral7B_GQA_bridge"
+    }
+  }
+}

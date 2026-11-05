@@ -32,6 +32,10 @@ import run_vqa as R
 common.setup_env()
 
 
+class ProbeError(Exception):
+    """A diagnostic checkpoint or attention-map contract failed."""
+
+
 @torch.no_grad()
 def attention_mass(system, llm, batcher, rows, batch_size=4, max_batches=25):
     """Fraction of text-token attention that lands on the visual prefix."""
@@ -47,7 +51,9 @@ def attention_mass(system, llm, batcher, rows, batch_size=4, max_batches=25):
         px, ids, mask = batcher.eval_batch(chunk)
         embed = llm.get_input_embeddings()(ids)
         if system.mode == "bridge":
-            summary = embed.mean(dim=1, keepdim=True)
+            counts = mask.sum(dim=1, keepdim=True).clamp(min=1)
+            summary = (embed * mask.unsqueeze(-1)).sum(
+                dim=1, keepdim=True) / counts.unsqueeze(-1)
             k, v = system.visual_kv(px, summary)
             n_prefix = k.shape[2]
             from transformers.cache_utils import DynamicCache
@@ -70,12 +76,14 @@ def attention_mass(system, llm, batcher, rows, batch_size=4, max_batches=25):
             pad = torch.ones(prefix.shape[:2], dtype=mask.dtype,
                              device=mask.device)
             full_mask = torch.cat([pad, mask], dim=1)
+            positions = (full_mask.cumsum(dim=1) - 1).clamp(min=0)
             out = llm(inputs_embeds=inputs, attention_mask=full_mask,
+                      position_ids=positions,
                       output_attentions=True)
             text_mask = mask
         attns = out.attentions
         if attns is None or attns[0] is None:
-            raise RuntimeError("the model did not return attention maps")
+            raise ProbeError("the model did not return attention maps")
         for idx, attn in enumerate(attns):
             # attn: (B, H, Q, K).  For the bridge the query axis covers only
             # the text tokens; for the baseline it covers prefix+text, so the
@@ -92,7 +100,7 @@ def attention_mass(system, llm, batcher, rows, batch_size=4, max_batches=25):
         lengths = text_mask.sum(dim=1)
         for length in lengths.tolist():
             positions_seen = torch.arange(1, int(length) + 1, dtype=torch.float64)
-            chance.append(float((n_prefix / (n_prefix + positions_seen)).mean()))
+            chance.extend((n_prefix / (n_prefix + positions_seen)).tolist())
     per_layer_head = (total / max(seen, 1.0)).tolist()
     per_layer = [sum(row) / len(row) for row in per_layer_head]
     return {
@@ -115,11 +123,12 @@ def kv_profile(system, llm, batcher, rows, batch_size=4, max_batches=8):
         chunk = rows[start:start + batch_size]
         if not chunk:
             break
-        _, ids, mask, _ = batcher.train_batch(chunk)
+        _, ids, mask = batcher.eval_batch(chunk)
         embed = llm.get_input_embeddings()(ids)
+        positions = (mask.cumsum(dim=1) - 1).clamp(min=0)
         cache = DynamicCache()
         llm(inputs_embeds=embed, attention_mask=mask,
-            past_key_values=cache, use_cache=True)
+            past_key_values=cache, position_ids=positions, use_cache=True)
         host_k.append([layer.keys.float().std().item() for layer in cache.layers])
         host_v.append([layer.values.float().std().item() for layer in cache.layers])
     n = len(host_k)
@@ -130,7 +139,10 @@ def kv_profile(system, llm, batcher, rows, batch_size=4, max_batches=8):
     if system is not None and system.mode == "bridge":
         px, ids, mask = batcher.eval_batch(rows[:batch_size])
         embed = llm.get_input_embeddings()(ids)
-        k, v = system.visual_kv(px, embed.mean(dim=1, keepdim=True))
+        counts = mask.sum(dim=1, keepdim=True).clamp(min=1)
+        summary = (embed * mask.unsqueeze(-1)).sum(
+            dim=1, keepdim=True) / counts.unsqueeze(-1)
+        k, v = system.visual_kv(px, summary)
         rows_out = []
         for idx in range(llm.config.num_hidden_layers):
             lk, lv = M.scale_for_layer(k, v, system.layer_scales, idx)
@@ -171,8 +183,9 @@ def main():
 
     kwargs = {}
     if kind not in ("caption", "blind"):
-        probe = batcher.train_batch(rows[cfg_args["eval_size"]:][:4])
-        M.calibrate_kv_stats(cfg, llm, llm.get_input_embeddings()(probe[1]))
+        _, ids, mask = batcher.eval_batch(
+            rows[cfg_args["eval_size"]:][:4])
+        M.calibrate_kv_stats(cfg, llm, llm.get_input_embeddings()(ids))
         mask = None
         if cfg_args.get("layer_mask"):
             mask = [float(x) for x in cfg_args["layer_mask"].split(",")]
@@ -182,10 +195,15 @@ def main():
                   "gate_mode": cfg_args["gate_mode"],
                   "layer_mask": mask,
                   "keep_ratio": cfg_args["keep_ratio"],
-                  "per_layer_scale": cfg_args.get("per_layer_scale", False)}
+                  "per_layer_scale": cfg_args.get("per_layer_scale", False),
+                  "bridge_kv_scale": cfg_args.get("bridge_kv_scale", 1.0)}
     system = R.build_system(kind, clip, llm, cfg, **kwargs)
     missing, unexpected = system.load_state_dict(blob["state"], strict=False)
     trained = [k for k in blob["state"]]
+    missing_trained = [key for key in trained if key in missing]
+    if missing_trained or unexpected:
+        raise ProbeError("checkpoint/state mismatch: missing %s, unexpected %s"
+                         % (missing_trained, list(unexpected)))
     print("loaded %d trained tensors (%d unexpected)" % (len(trained),
                                                          len(unexpected)),
           flush=True)

@@ -39,6 +39,13 @@ LAYER_NAMES = ["basic", "semantic_object", "spatial_relation", "attribute"]
 EOS_WEIGHT = 0.2
 
 
+def masked_prompt_summary(embed, mask):
+    """Average only visible prompt tokens in training and generation."""
+    counts = mask.sum(dim=1, keepdim=True).clamp(min=1)
+    return (embed * mask.unsqueeze(-1)).sum(
+        dim=1, keepdim=True) / counts.unsqueeze(-1)
+
+
 def answer_loss(logits, labels, eos_id):
     """Cross-entropy over the answer span with a down-weighted EOS."""
     shift_logits = logits[:, :-1, :].contiguous().float()
@@ -316,7 +323,8 @@ class CacheBridgeVQA(nn.Module):
     def __init__(self, clip, llm, cfg, inject_mode="prepend",
                  use_geometry=True, use_gate=True, gate_mode="learned",
                  layer_mask=None,
-                 keep_ratio=1.0, per_layer_scale=False):
+                 keep_ratio=1.0, per_layer_scale=False,
+                 bridge_kv_scale=1.0):
         super(CacheBridgeVQA, self).__init__()
         self.clip = clip
         self.llm = llm
@@ -325,6 +333,7 @@ class CacheBridgeVQA(nn.Module):
         self.bridge = BridgeAdapter(cfg, use_geometry, use_gate,
                                     gate_mode)
         self.inject_mode = inject_mode
+        self.bridge_kv_scale = float(bridge_kv_scale)
         self.layer_mask = layer_mask
         self.keep_ratio = keep_ratio
         # Two learned scalars (one for K, one for V) per decoder layer.
@@ -362,11 +371,20 @@ class CacheBridgeVQA(nn.Module):
         k, v = self.bridge(cache, coords, text_summary, self.layer_mask)
         if k is None:
             return None, None
-        return self._compress(k, v)
+        k, v = self._compress(k, v)
+        if self.bridge_kv_scale != 1.0:
+            k = k * self.bridge_kv_scale
+            v = v * self.bridge_kv_scale
+        return k, v
 
-    def forward(self, pixel_values, input_ids, attention_mask, labels):
+    def forward(self, pixel_values, input_ids, attention_mask, labels,
+                prompt_mask=None):
         embed = self.llm.get_input_embeddings()(input_ids)
-        summary = embed.detach().mean(dim=1, keepdim=True)
+        if prompt_mask is None:
+            prompt_mask = attention_mask.clone()
+            if labels is not None:
+                prompt_mask[labels != -100] = 0
+        summary = masked_prompt_summary(embed.detach(), prompt_mask)
         k, v = self.visual_kv(pixel_values, summary)
         return run_llm_with_visual_kv(self.llm, embed, attention_mask,
                                       labels, k, v, self.inject_mode,
@@ -375,7 +393,7 @@ class CacheBridgeVQA(nn.Module):
     @torch.no_grad()
     def generate(self, pixel_values, input_ids, attention_mask, max_new_tokens=8):
         embed = self.llm.get_input_embeddings()(input_ids)
-        summary = embed.mean(dim=1, keepdim=True)
+        summary = masked_prompt_summary(embed, attention_mask)
         k, v = self.visual_kv(pixel_values, summary)
         return generate_with_visual_kv(self.llm, embed, attention_mask, k, v,
                                        self.inject_mode, max_new_tokens,
@@ -433,7 +451,8 @@ class CaptionBaseline(nn.Module):
             prefix = torch.zeros_like(prefix)
         return prefix
 
-    def forward(self, pixel_values, input_ids, attention_mask, labels):
+    def forward(self, pixel_values, input_ids, attention_mask, labels,
+                prompt_mask=None):
         prefix = self.visual_prefix(pixel_values)
         embed = self.llm.get_input_embeddings()(input_ids)
         inputs = torch.cat([prefix, embed], dim=1)
@@ -491,7 +510,8 @@ class BlindBaseline(nn.Module):
         batch = pixel_values.shape[0]
         return self.prefix.unsqueeze(0).expand(batch, -1, -1).to(pixel_values.dtype)
 
-    def forward(self, pixel_values, input_ids, attention_mask, labels):
+    def forward(self, pixel_values, input_ids, attention_mask, labels,
+                prompt_mask=None):
         prefix = self.visual_prefix(pixel_values)
         embed = self.llm.get_input_embeddings()(input_ids)
         inputs = torch.cat([prefix, embed], dim=1)

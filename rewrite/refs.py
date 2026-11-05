@@ -85,6 +85,11 @@ REFS = [
      "Li H, Li Y, Tian A, et al. A survey on large language model "
      "acceleration based on KV cache management. arXiv preprint, 2024. "
      "arXiv:2412.19442."),
+    ("zhou2024dynamickv",
+     "Zhou X, Wang W, Zeng M, et al. DynamicKV: Task-aware adaptive KV cache "
+     "compression for long context LLMs. In: Findings of the Association for "
+     "Computational Linguistics: EMNLP 2025. "
+     "doi:10.18653/v1/2025.findings-emnlp.426."),
     ("beltagy2020longformer",
      "Beltagy I, Peters M E, Cohan A. Longformer: The long-document "
      "transformer. arXiv preprint, 2020. arXiv:2004.05150."),

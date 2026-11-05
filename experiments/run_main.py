@@ -9,6 +9,7 @@ brings it under +/-2 and is affordable because only the connector trains.
 
 import os
 import subprocess
+import sys
 
 RUNS = []
 for dataset, prefix in [("GQA-spatial", "GQA"), ("VQAv2", "VQAv2"),
@@ -16,7 +17,7 @@ for dataset, prefix in [("GQA-spatial", "GQA"), ("VQAv2", "VQAv2"),
     for system in ["blind", "caption", "bridge"]:
         RUNS.append((dataset, system, "%s_%s" % (prefix, system)))
 
-PY = os.path.join(".venv", "Scripts", "python.exe")
+PY = sys.executable
 SCRIPT = os.path.join("experiments", "run_vqa.py")
 
 BASE = ["--train-size", "3000", "--eval-size", "2000", "--steps", "1500",

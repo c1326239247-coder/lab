@@ -35,7 +35,7 @@ ABLATIONS = [
 ]
 
 CAPACITY = ["cap_rank64", "cap_rank128", "cap_rank256", "cap_rank512",
-            "cap_rank1024"]
+            "cap_rank1024", "cap_rank2304"]
 
 
 def load(tag):
@@ -114,7 +114,7 @@ def figure_main():
                         else run["accuracy_shuffled_images"])
     ax.plot(range(len(datasets)), shuffled, "kv", markersize=7,
             label="Cache-bridging, mismatched image")
-    ax.set_ylabel("VQA accuracy (%)")
+    ax.set_ylabel("Accuracy (%)")
     ax.set_xticks(range(len(datasets)))
     ax.set_xticklabels([name for name, _ in datasets])
     ax.set_title("Connector comparison under an identical training budget\n"
@@ -142,7 +142,7 @@ def figure_levels():
     fig, ax = plt.subplots(figsize=(6.6, 3.8))
     ax.bar(labels, values, color="#55A868", yerr=errs, capsize=3,
            ecolor="#444444")
-    ax.set_ylabel("VQA accuracy (%)")
+    ax.set_ylabel("Accuracy (%)")
     ax.set_title("Contribution of each cache level (GQA-spatial)\n"
                  "(error bars: 95% bootstrap CI)")
     _clean(ax)
@@ -176,7 +176,7 @@ def figure_capacity():
                    label="Question-only blind control")
     ax.set_xscale("log")
     ax.set_xlabel("Trainable connector parameters (log scale)")
-    ax.set_ylabel("VQA accuracy (%)")
+    ax.set_ylabel("Accuracy (%)")
     ax.set_title("Accuracy against bridge capacity (GQA-spatial)")
     ax.legend(frameon=False, fontsize=9)
     _clean(ax)
@@ -198,8 +198,11 @@ def figure_attention():
         other = caption["attention_mass"]["per_layer_mean"]
         ax.plot(range(len(other)), other, marker="s", color="#4C72B0",
                 label="Caption-style, soft embedding prefix")
-    ax.axhline(chance, color="#999999", linestyle=":",
-               label="chance for a uniform reader")
+        ax.axhline(caption["attention_mass"]["chance_level"],
+                   color="#4C72B0", linestyle=":",
+                   label="caption uniform reference")
+    ax.axhline(chance, color="#DD8452", linestyle=":",
+               label="bridge uniform reference")
     ax.set_xlabel("Decoder layer")
     ax.set_ylabel("Attention mass on visual prefix")
     ax.set_title("How much attention the visual prefix actually receives")

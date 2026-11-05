@@ -14,8 +14,11 @@ import re
 import sys
 
 import docx
+from docx.enum.table import WD_CELL_VERTICAL_ALIGNMENT, WD_TABLE_ALIGNMENT
 from docx.enum.text import WD_ALIGN_PARAGRAPH
-from docx.shared import Inches
+from docx.oxml import OxmlElement
+from docx.oxml.ns import qn
+from docx.shared import Inches, RGBColor
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
@@ -24,10 +27,9 @@ import numbers as facts_mod
 import refs as refs_mod
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-SRC = ("C:/Users/luyang/Downloads/"
-       "Cache-Bridging Lossless Cross-Modal Transfer via 8.21.docx")
-DST = ("C:/Users/luyang/Downloads/"
-       "Cache-Bridging Hierarchical Visual KV Injection (revised).docx")
+SRC = os.path.join(ROOT, "rewrite", "template.docx")
+DIST = os.path.join(ROOT, "dist")
+DST = os.path.join(DIST, "Cache-Bridging_revised_2026-10-30.docx")
 FIG_DIR = os.path.join(ROOT, "paper_figures")
 
 
@@ -105,9 +107,11 @@ class Builder(object):
             para.paragraph_format.keep_with_next = True
         return para
 
-    def caption(self, text):
+    def caption(self, text, keep_with_next=False):
         """A figure/table caption: bold label, plain remainder, centred."""
         para = self.para("", align=WD_ALIGN_PARAGRAPH.CENTER)
+        para.paragraph_format.keep_together = True
+        para.paragraph_format.keep_with_next = keep_with_next
         match = re.match(r"^((?:Figure|Table)\s+\d+\.)\s*(.*)$", text, re.S)
         if match:
             para.add_run(match.group(1)).bold = True
@@ -125,7 +129,15 @@ class Builder(object):
 
     def picture(self, path, width_inches=5.6):
         para = self.para("", align=WD_ALIGN_PARAGRAPH.CENTER)
+        para.paragraph_format.keep_with_next = True
         para.add_run().add_picture(path, width=Inches(width_inches))
+        return para
+
+    def picture_blob(self, blob, width_inches=5.6):
+        para = self.para("", align=WD_ALIGN_PARAGRAPH.CENTER)
+        para.paragraph_format.keep_with_next = True
+        para.add_run().add_picture(io.BytesIO(blob),
+                                   width=Inches(width_inches))
         return para
 
     def table(self, rows, style, widths=None):
@@ -135,9 +147,17 @@ class Builder(object):
         except KeyError:
             pass
         table.autofit = True
+        table.alignment = WD_TABLE_ALIGNMENT.CENTER
         for r, row in enumerate(rows):
+            tr_pr = table.rows[r]._tr.get_or_add_trPr()
+            tr_pr.append(OxmlElement("w:cantSplit"))
+            if r == 0:
+                header = OxmlElement("w:tblHeader")
+                header.set(qn("w:val"), "true")
+                tr_pr.append(header)
             for c, value in enumerate(row):
                 cell = table.cell(r, c)
+                cell.vertical_alignment = WD_CELL_VERTICAL_ALIGNMENT.CENTER
                 cell.text = ""
                 para = cell.paragraphs[0]
                 run = para.add_run(str(value))
@@ -286,8 +306,23 @@ def build_tables(values, runs):
                      "{:,}".format(runs["gqa_c"]["connector_params"]),
                      acc_ci(runs["gqa_c"])])
 
+    prefix = [["Total prefix tokens", "Caption-style (95% CI)",
+               "Cache-bridging (95% CI)", "Caption - bridge, paired 95% CI"]]
+    for tag in ("6", "9", "18", "36"):
+        caption_run = facts_mod.load("run_prefix%s_caption.json" % tag)
+        bridge_run = facts_mod.load("run_prefix%s_bridge.json" % tag)
+        difference = runs["paired"]["prefix%s_caption_minus_bridge" % tag]
+        prefix.append([
+            int(tag) * 4,
+            acc_ci(caption_run),
+            acc_ci(bridge_run),
+            paired({"paired_delta_shuffled": difference},
+                   "paired_delta_shuffled"),
+        ])
+
     tables = {"levels": levels, "main": main, "control": control,
-              "cost": cost, "ablation": ablation, "capacity": capacity}
+              "cost": cost, "ablation": ablation, "capacity": capacity,
+              "prefix": prefix}
 
     probe = runs.get("probe_b")
     if probe is not None:
@@ -307,10 +342,13 @@ TABLE_CAPTIONS = {
                "column states the hypothesis behind the design, taken from the "
                "layer-wise probing literature @@CITE:dosovitskiy2021vit@@; it "
                "is not a result of this paper, and Section 4.5 tests it."),
-    "main": ("Table 2. VQA accuracy (%) with 95% bootstrap confidence "
+    "main": ("Table 2. Accuracy (%) with 95% bootstrap confidence "
              "intervals on {eval_size} held-out questions per dataset, after "
              "{steps} steps under an identical training protocol with both "
-             "backbones frozen. The blind control never reads the image."),
+             "backbones frozen. The blind control never reads the image. "
+             "OK-VQA uses ten-reference VQA-style soft scoring; VQAv2 and GQA "
+             "are normalised exact match with the references available in "
+             "Section 3.5."),
     "control": ("Table 3. Control conditions (%). \u201cMismatched image\u201d scores "
                 "the same trained weights with every question paired with "
                 "another question\u2019s image; \u201cvisual cache disabled\u201d zeroes "
@@ -319,8 +357,9 @@ TABLE_CAPTIONS = {
                 "per-question differences; \u201cn.s.\u201d marks an interval that "
                 "contains zero."),
     "cost": ("Table 4. Single-sample inference cost, {cost_repeats} questions, "
-             "{cost_new_tokens} generated tokens, measured back to back in one "
-             "process on one {gpu}. Peak memory is quoted in MiB because the "
+             "up to {cost_new_tokens} generated tokens, measured back to back in one "
+             "process on one {gpu} with the trained GQA-spatial checkpoints. "
+             "Peak memory is quoted in MiB because the "
              "two frozen backbones dominate it and the connectors differ by "
              "far less than a gigabyte."),
     "ablation": ("Table 5. Ablations on GQA-spatial at {abl_steps} steps, "
@@ -332,6 +371,10 @@ TABLE_CAPTIONS = {
                  "main-comparison protocol. The bridge is grown over "
                  "{cap_range} trainable parameters, bracketing the "
                  "baseline\u2019s {caption_params}."),
+    "prefix": ("Table 8. Matched total-prefix comparison on GQA-spatial at "
+               "{prefix_steps} steps. Both systems receive the same total "
+               "number of prefix tokens in each row. The final column is a "
+               "paired bootstrap over per-question score differences."),
     "attention": ("Table 7. Share of text-token attention probability that "
                   "lands on the injected visual prefix, per decoder layer, "
                   "averaged over heads and over {probe_tokens} scored text "
@@ -344,23 +387,15 @@ TABLE_STYLES = {"levels": "Light Grid", "main": "Grid Table 6 Colorful",
                 "cost": "Grid Table 6 Colorful",
                 "ablation": "Grid Table 6 Colorful",
                 "capacity": "Grid Table 6 Colorful",
+                "prefix": "Grid Table 6 Colorful",
                 "attention": "Grid Table 6 Colorful"}
 
 
-# Paragraph indices in the ORIGINAL document (see the map printed by
-# rewrite/inspect_source.py).  Everything strictly between the abstract
-# and the reference heading is replaced; the four figure paragraphs are
-# lifted out first and put back where content.py asks for them.
-IDX_TITLE = (0, 1)
-IDX_ABSTRACT = 16
-IDX_KEYWORDS = 17
-IDX_BODY_FIRST = 18          # "1 Introduction"
-IDX_REFS_HEADING = 108
-IDX_FIGURES = (21, 44, 50, 61)
-IDX_DECL_FIRST = 138         # blank line before "Funding"
-IDX_DATA_LABEL = 145
-IDX_DATA_TEXT = 146
-IDX_APPENDIX_FIRST = 147
+def find_index(paras, prefix):
+    for idx, para in enumerate(paras):
+        if para.text.strip().startswith(prefix):
+            return idx
+    raise SystemExit("could not locate paragraph starting with %r" % prefix)
 
 
 def set_text(paragraph, text):
@@ -380,26 +415,45 @@ def build():
     doc = docx.Document(SRC)
     paras = doc.paragraphs
 
-    # Title and abstract.
-    set_text(paras[IDX_TITLE[0]], content.TITLE[0])
-    set_text(paras[IDX_TITLE[1]], content.TITLE[1])
-    set_text(paras[IDX_ABSTRACT], fill(content.ABSTRACT, values, cites))
-    set_text(paras[IDX_KEYWORDS], content.KEYWORDS)
+    title_idx = find_index(paras, "Cache-Bridging")
+    abstract_idx = find_index(paras, "Standard vision-language pipelines")
+    keywords_idx = find_index(paras, "Keywords: Cache-Bridging")
+    body_first = find_index(paras, "1  Introduction")
+    refs_heading = find_index(paras, "References")
 
-    # Detach the four figure images so they can be re-placed by content.py.
+    # Title and abstract.
+    set_text(paras[title_idx], " ".join(content.TITLE))
+    paras[title_idx].style = doc.styles["Title"]
+    paras[title_idx].paragraph_format.line_spacing = 1.15
+    for p_pr in (paras[title_idx]._p.get_or_add_pPr(),
+                 doc.styles["Title"].element.pPr):
+        if p_pr is not None:
+            border = p_pr.find(qn("w:pBdr"))
+            if border is not None:
+                p_pr.remove(border)
+    for run in paras[title_idx].runs:
+        run.font.color.rgb = RGBColor(0, 0, 0)
+        run.font.size = docx.shared.Pt(18)
+    for style_name in ("Title", "Heading 1", "Heading 2"):
+        doc.styles[style_name].font.color.rgb = RGBColor(0, 0, 0)
+    set_text(paras[abstract_idx], fill(content.ABSTRACT, values, cites))
+    paras[abstract_idx].paragraph_format.keep_together = True
+    abstract_heading_idx = find_index(paras, "Abstract")
+    paras[abstract_heading_idx].paragraph_format.keep_with_next = True
+    set_text(paras[keywords_idx], content.KEYWORDS)
+
+    # Capture the four template figures before removing the old body.
     figures = []
-    for idx in IDX_FIGURES:
-        element = paras[idx]._p
-        element.getparent().remove(element)
-        figures.append(element)
+    for shape in list(doc.inline_shapes)[:4]:
+        rel_id = shape._inline.graphic.graphicData.pic.blipFill.blip.embed
+        figures.append(doc.part.related_parts[rel_id].blob)
+    if len(figures) != 4:
+        raise SystemExit("expected four template figures")
 
     # Drop the old body, the old reference entries, the old declarations,
     # and the old appendix.  Only the "References" heading itself is kept.
-    removed = set(IDX_FIGURES)
-    for idx in list(range(IDX_BODY_FIRST, IDX_REFS_HEADING)) + \
-            list(range(IDX_REFS_HEADING + 1, len(paras))):
-        if idx in removed:
-            continue
+    for idx in list(range(body_first, refs_heading)) + \
+            list(range(refs_heading + 1, len(paras))):
         element = paras[idx]._p
         if element.getparent() is not None:
             element.getparent().remove(element)
@@ -407,7 +461,7 @@ def build():
         table._tbl.getparent().remove(table._tbl)
 
     # Rebuild the body after the keyword line.
-    builder = Builder(doc, paras[IDX_KEYWORDS])
+    builder = Builder(doc, paras[keywords_idx])
     for kind, payload in content.BODY:
         if kind == "H1":
             builder.para(payload, style="Heading 1")
@@ -418,20 +472,21 @@ def build():
         elif kind == "B":
             builder.para(fill(payload, values, cites), style="List Bullet")
         elif kind == "FIG":
-            builder.move(figures[payload])
+            builder.picture_blob(figures[payload])
         elif kind == "FIGNEW":
             builder.picture(os.path.join(FIG_DIR, payload))
         elif kind == "CAP":
             builder.caption(fill(payload, values, cites))
         elif kind == "TBL":
-            builder.caption(fill(TABLE_CAPTIONS[payload], values, cites))
+            builder.caption(fill(TABLE_CAPTIONS[payload], values, cites),
+                            keep_with_next=True)
             builder.table(tables[payload], TABLE_STYLES[payload])
             builder.para("")
         else:
             raise SystemExit("unknown item kind %r" % kind)
 
     # Reference list, numbered in order of first citation.
-    builder = Builder(doc, paras[IDX_REFS_HEADING])
+    builder = Builder(doc, paras[refs_heading])
     for number, key in enumerate(cites.order, start=1):
         builder.para("[%d] %s" % (number, refs_mod.BY_KEY[key]))
     orphans = cites.unused()
@@ -452,6 +507,7 @@ def build():
                                  "human participants performed by any of the "
                                  "authors."),
             ("Competing Interests", content.COMPETING_INTERESTS),
+            ("Code Availability", content.CODE_AVAILABILITY),
             ("Data Availability", content.DATA_AVAILABILITY)]:
         builder.para(label, bold=True, keep_with_next=True)
         builder.para(text)
@@ -466,6 +522,7 @@ def build():
         else:
             raise SystemExit("unknown appendix kind %r" % kind)
 
+    os.makedirs(DIST, exist_ok=True)
     doc.save(DST)
     return DST, values
 

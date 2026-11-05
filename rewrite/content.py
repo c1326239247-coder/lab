@@ -13,51 +13,27 @@ figure of the original file, FIGNEW inserts a generated figure, TBL
 inserts a generated table, CAP a caption line.
 """
 
-TITLE = ["Cache-Bridging: Injecting a Hierarchical Visual Key-Value Cache",
-         "into a Frozen Language Model \u2014 A Negative Result and a Diagnosis"]
+TITLE = ["Cache bridging of hierarchical visual key values does not",
+         "consistently improve visual question answering with a frozen language model"]
 
 ABSTRACT = (
-    "Standard vision-language pipelines compress an image into a compact "
-    "text-space representation and then let a large language model (LLM) consume "
-    "that representation. This serial \u201cimage \u2192 tokens \u2192 LLM\u201d flow discards much "
-    "of the spatial, object, and attribute structure that the vision encoder "
-    "spent compute to build. We specify and evaluate a different design: keep the "
-    "visual key-value (KV) cache alive and splice it directly into a frozen LLM\u2019s "
-    "per-layer attention through a learned bridge adapter. We call this "
-    "cache-bridging. The bridge is small \u2014 a shared low-rank lift, a "
-    "2D-geometry-preserving attention, and a prompt-conditioned gate \u2014 and the "
-    "visual cache is a four-level hierarchy tapped from four depths of the "
-    "encoder. We evaluate it on a single consumer GPU with a frozen CLIP-ViT-L/14 "
-    "encoder and a frozen TinyLlama-1.1B-Chat decoder on {eval_size} held-out "
-    "questions from each of VQAv2, OK-VQA, and relation-heavy GQA, against both a "
-    "caption-style projection baseline trained under an identical budget and a "
-    "question-only blind control that never sees the image. Three findings are "
-    "reported. First, the injected cache does carry image content, at least where "
-    "spatial structure matters: on GQA-spatial the bridge scores "
-    "{gqa_bridge_ci} with the correct image, and pairing every question with the "
-    "wrong image costs {delta_gqa_shuf}, a paired bootstrap interval that "
-    "excludes zero, whereas on VQAv2 the same control costs only "
-    "{delta_vqa_shuf}. Second, and contrary to the outcome we "
-    "expected, cache-bridging does not beat the much simpler caption-style "
-    "connector ({gqa_bridge} against {gqa_caption} on GQA-spatial) and on this "
-    "dataset it does not even beat the blind control ({gqa_blind}); a capacity "
-    "sweep over {cap_range} trainable parameters, bracketing the baseline\u2019s "
-    "{caption_params}, moves accuracy by only {cap_span} points, so the limiting "
-    "factor is the injection mechanism rather than adapter size. Third, a "
-    "layer-wise attention probe locates the mechanism\u2019s weakness, and not where "
-    "we expected it: the injected prefix takes {probe_mass} of the text tokens\u2019 "
-    "attention probability, {probe_ratio} times what a uniform reader would give "
-    "it, while the baseline\u2019s embedding-space prefix takes {probe_caption_mass}, "
-    "only {probe_caption_ratio} times its own share. The injected cache is not "
-    "ignored by the frozen decoder \u2014 it crowds out the question text in every "
-    "layer, and it is not accurate enough to be worth that displacement, which "
-    "also explains why switching the cache off raises VQAv2 accuracy. We "
-    "also report the engineering detail that decides whether the method works at "
-    "all: keys and values in a LLaMA-style cache differ in scale by an order of "
-    "magnitude (k_std \u2248 {k_std} against v_std \u2248 {v_std}), and a bridge that "
-    "normalises the two jointly destroys the visual signal completely. All runs "
-    "are deterministic and every number, figure, and table in this paper is "
-    "regenerated from the released raw result files."
+    "A caption-style connector turns an image into a short soft prefix and "
+    "discards most of the spatial structure in the vision encoder\u2019s key-value "
+    "(KV) cache. We therefore evaluate cache bridging, an adapter that lifts a "
+    "four-level visual KV cache directly into a frozen language model\u2019s "
+    "per-layer attention. Under matched data and optimisation on VQAv2, OK-VQA, "
+    "and GQA-spatial, the default bridge remains below the simpler caption-style "
+    "baseline by point estimate on all three datasets. It exceeds the "
+    "question-only control only on GQA-spatial. "
+    "Mismatched-image and disabled-cache controls show that it can "
+    "transmit image-dependent signal. Capacity changes GQA-spatial accuracy, "
+    "and one higher-capacity configuration exceeds the caption baseline by "
+    "point estimate, but the experiments do not establish a consistent "
+    "advantage across configurations. Matched-prefix and joint key/value "
+    "scaling controls, attention probes, and a Mistral-7B sensitivity check "
+    "implicate the frozen read-out path without isolating a single cause. "
+    "The revision archive contains the code, deterministic scripts, and every "
+    "raw result file."
 )
 
 KEYWORDS = ("Keywords: Cache-Bridging; Vision-Language Models; KV Cache; "
@@ -90,13 +66,14 @@ BODY = [
       "existing attention mechanism @@CITE:vaswani2017attention@@ performs the "
       "cross-modal reasoning. Nothing in the encoder or the language model is "
       "fine-tuned; only the bridge is trained."),
-("FIG", 0),
+("FIGNEW", "fig1_prefix_evaluated.png"),
 ("CAP", "Figure 1. Overall pipeline of cache-bridging. The frozen vision encoder "
         "is read at four depths to form a hierarchical key-value cache (L1-L4); "
         "the bridge adapter lifts that cache into the language model\u2019s per-head "
         "KV layout; the result is spliced into every decoder layer as a cache "
         "prefix, and the frozen language model attends to it while generating the "
-        "answer."),
+        "answer. Prefix mode is the only configuration evaluated here; the other "
+        "routing variants are optional and unmeasured."),
 ("P", "The design is closely related to a family of methods that inject learned "
       "vectors into a frozen language model. Prefix-tuning "
       "@@CITE:li2021prefix@@ and P-Tuning v2 @@CITE:liu2022ptuningv2@@ already "
@@ -119,41 +96,34 @@ BODY = [
       "actually does once it is built and measured under a controlled protocol. "
       "The second half of that aim leads to a result we did not anticipate. "
       "Cache-bridging works in the sense that visual information demonstrably "
-      "reaches the language model through the KV pathway, and the gate is "
-      "necessary for that to happen; but at an equal training budget it does not "
+      "reaches the language model through the KV pathway, although a fixed "
+      "prompt-derived blend performs comparably to the adaptive gate; at an "
+      "equal training budget the bridge does not "
       "outperform the ordinary caption-style projection it was designed to "
-      "replace, and on the relation-heavy GQA subset it does not outperform a "
-      "control that never sees the image. This paper is therefore best read as a "
+      "replace. On the relation-heavy GQA subset it exceeds the blind control "
+      "but remains below the caption baseline by point estimate, with overlapping "
+      "intervals. This paper is therefore best read as a "
       "negative result with a diagnosis rather than as a proposal, and we spend "
       "as much space on locating the cause as on the measurement itself."),
 ("P", "Our contributions are:"),
-("B", "(1) a fully specified four-level hierarchical visual cache, tapped from "
-      "four depths of a frozen vision encoder and annotated with patch-grid "
-      "coordinates;"),
-("B", "(2) a low-rank bridge adapter @@CITE:hu2022lora@@ that maps the encoder\u2019s "
-      "per-head KV into the language model\u2019s per-head KV layout, with a 2D "
-      "relative-position bias that preserves patch geometry and a "
-      "prompt-conditioned gate;"),
-("B", "(3) an injector that splices the bridged KV into every decoder layer\u2019s "
-      "past-key-values, including the position-encoding and attention-mask "
-      "handling this requires;"),
-("B", "(4) a controlled evaluation on one consumer GPU in which the bridge, a "
+("B", "(1) a fully specified cache-bridging mechanism: a four-level visual KV "
+      "cache, a low-rank geometry-preserving and prompt-gated bridge "
+      "@@CITE:hu2022lora@@, and an injector that writes the bridged KV into "
+      "every decoder layer with the required position and mask handling;"),
+("B", "(2) a controlled evaluation on one consumer GPU in which the bridge, a "
       "caption-style baseline, and a question-only blind control are trained on "
       "identical data for an identical number of steps and scored on "
       "{eval_size} held-out questions with paired bootstrap intervals, plus two "
       "further control conditions \u2014 mismatched images and a disabled visual "
       "pathway \u2014 applied symmetrically to both visual systems;"),
-("B", "(5) a diagnosis of why the method underperforms: a capacity sweep over "
-      "{cap_range} parameters that rules out adapter size, a layer-wise "
-      "attention probe showing that the injected prefix receives less attention "
-      "than an embedding-space prefix, and a per-layer scaling experiment that "
-      "tests whether sharing one cache across all layers is the cause;"),
-("B", "(6) the key-value scale calibration finding that determines whether the "
-      "injected cache is usable at all, together with three further "
-      "implementation traps specific to writing into a decoder cache;"),
-("B", "(7) open-source code, deterministic driver scripts, unit tests, raw "
-      "per-run result files, and the build scripts of this manuscript, so that "
-      "every number below can be regenerated."),
+("B", "(3) a diagnosis of why the method underperforms: a matched prefix-length "
+      "sweep, an attention-allocation sweep, a capacity sweep over {cap_range} "
+      "parameters, a layer-wise attention probe, and a larger-decoder "
+      "replication;"),
+("B", "(4) the key-value scale calibration finding, with open-source code, "
+      "deterministic driver scripts, unit tests, raw per-run result files, and "
+      "the build scripts of this manuscript, so that every number below can be "
+      "regenerated."),
 ("H1", "2  Related Work"),
 ("H2", "2.1  End-to-end multimodal LLMs"),
 ("P", "The LLaVA family @@CITE:liu2023llava,liu2024llava15,liu2024llavanext@@, "
@@ -188,18 +158,20 @@ BODY = [
       "cross-attention inputs, and no new layers are added to the host model. "
       "Section 5.3 argues from our measurements that Flamingo\u2019s choice of adding "
       "trainable layers, rather than reusing the host\u2019s frozen attention, is "
-      "likely the more important difference."),
+      "a relevant difference for future controlled tests."),
 ("H2", "2.3  KV-cache reuse and editing"),
 ("P", "StreamingLLM\u2019s attention sinks @@CITE:xiao2024streamingllm@@, CacheBlend "
       "@@CITE:yao2025cacheblend@@, and the recent survey of KV cache management "
       "@@CITE:li2024kvsurvey@@ edit, reuse, or compress the language model\u2019s own "
-      "KV cache; Longformer-style windowed attention "
+      "KV cache; DynamicKV @@CITE:zhou2024dynamickv@@ shows that useful KV mass "
+      "varies across layers and tasks, which motivates the layer-adaptive "
+      "retention discussion in Section 4.8. Longformer-style windowed attention "
       "@@CITE:beltagy2020longformer@@ likewise operates on the text side. The "
       "cache we manipulate originates in the vision encoder and therefore carries "
       "structure that text KV does not have: a 2D grid and a depth hierarchy. To "
       "our knowledge the interaction between those properties and a host model\u2019s "
       "KV statistics has not been characterised, and Section 5.1 shows that it is "
-      "decisive."),
+      "important in this implementation."),
 ("H2", "2.4  Geometry-aware attention"),
 ("P", "Swin @@CITE:liu2021swin@@ and CSWin @@CITE:dong2022cswin@@ introduce a 2D "
       "relative-position bias in vision transformers, and RoFormer / RoPE "
@@ -246,8 +218,9 @@ BODY = [
       "H. This step introduces no learnable parameters. It is implemented as an "
       "explicit block mean rather than with adaptive average pooling, because the "
       "latter has a non-deterministic CUDA backward and made identical "
-      "configurations irreproducible; with the explicit form every run in this "
-      "paper reproduces bit-for-bit at a fixed seed."),
+      "configurations irreproducible; with the explicit form the repeated "
+      "TinyLlama configurations in this paper reproduce bit-for-bit at a "
+      "fixed seed."),
 ("FIG", 1),
 ("CAP", "Figure 2. Hierarchical decomposition of the visual KV cache. Four levels "
         "are tapped from four fixed fractions of the depth of the frozen vision "
@@ -350,8 +323,10 @@ BODY = [
 ("P", "The bridge, the caption-style baseline, and the blind control are all "
       "connectors between two frozen backbones, so they can be trained under one "
       "protocol and compared directly. The vision encoder and the language model "
-      "are frozen in bf16 and never receive gradients; only the connector is "
-      "optimised. Training uses AdamW @@CITE:loshchilov2019adamw@@ (\u03b21=0.9, "
+      "are frozen in bf16 for the TinyLlama experiments and never receive "
+      "gradients; only the connector is optimised. The Mistral sensitivity "
+      "check uses the 4-bit decoder described in Section 4.9. Training uses "
+      "AdamW @@CITE:loshchilov2019adamw@@ (\u03b21=0.9, "
       "\u03b22=0.95, no weight decay), a OneCycle schedule "
       "@@CITE:smith2019superconvergence@@ with 10% warmup, peak learning rate "
       "{lr}, batch size {batch}, gradient-norm clipping at 1.0, and {steps} steps "
@@ -361,22 +336,45 @@ BODY = [
       "model does not learn to answer with an immediate stop."),
 ("P", "Each dataset is drawn once, shuffled with a fixed seed, and split into "
       "{eval_size} held-out evaluation questions and {train_size} training "
-      "questions; no evaluation image or question is ever trained on. Answers are "
+      "questions. No evaluation question-answer pair is used for training. The "
+      "split is by question rather than by image, so an image can occur in both "
+      "partitions with different questions. The split audit finds "
+      "{shared_images_vqa} such shared images in VQAv2, {shared_images_ok} in "
+      "OK-VQA, and {shared_images_gqa} in GQA-spatial. The results therefore "
+      "measure generalisation to held-out questions, not to unseen images. Answers are "
       "produced by greedy decoding of at most {max_new_tokens} tokens with "
-      "end-of-sequence stopping, and scored with the official VQA metric, "
-      "min(#matching human answers / 3, 1), after the standard normalisation "
-      "(lowercasing, article and punctuation removal, whitespace collapsing). "
-      "Every reported accuracy carries a 95% percentile bootstrap confidence "
+      "end-of-sequence stopping and scored as described below. Every reported "
+      "accuracy carries a 95% percentile bootstrap confidence "
       "interval over the {n_boot} resamples of the per-question scores "
       "@@CITE:efron1993bootstrap@@, and every comparison between two conditions "
       "scored on the same questions is reported as a paired bootstrap interval "
       "over the per-question differences, which removes question difficulty from "
       "the comparison and is considerably tighter than comparing two independent "
-      "intervals. All runs are deterministic: kernels are configured for "
+      "intervals. The TinyLlama runs are deterministic: kernels are configured for "
       "reproducibility, the pooling step avoids the non-deterministic adaptive "
       "pooling backward, and the fused attention backward is disabled, so a "
       "configuration repeated at the same seed on this machine yields identical "
       "per-question scores."),
+("P", "The prompt summary used by the bridge gate is a mask-weighted mean of "
+      "question tokens only. During training, answer tokens are excluded by the "
+      "same label mask that defines the loss; neither the gold answer nor right "
+      "padding contributes. During generation, the attention mask excludes left "
+      "padding. A regression check confirms that the two paths produce identical "
+      "summaries for the same prompt. This correction matters because an earlier "
+      "implementation averaged over the answer span during training."),
+("P", "We use the same answer normalisation and VQA-style scoring rule, "
+      "min(#matching reference answers / 3, 1), for all datasets. "
+      "Generated text is first truncated to its first line and then to the "
+      "text before the first period or comma. Normalisation lowercases, "
+      "replaces non-alphanumeric characters with spaces, removes a/an/the, "
+      "and collapses whitespace. OK-VQA supplies "
+      "ten human references per question. The VQAv2 source used here supplies "
+      "only its majority answer and GQA supplies one reference answer, so on "
+      "those two datasets the rule reduces to normalised exact match. We use "
+      "'accuracy' as the common column name but do not present these two scores "
+      "as a full ten-annotator VQAv2 evaluation. Training uses the majority "
+      "answer for VQAv2, the first listed human answer for OK-VQA, and the "
+      "single reference for GQA."),
 ("P", "We deliberately do not use a three-stage schedule with large-scale "
       "alignment pre-training: with one 16 GB GPU it is out of reach, and adding "
       "it for one system only would break the equal-budget comparison. Section 6 "
@@ -385,7 +383,8 @@ BODY = [
 ("H2", "4.1  Setup"),
 ("P", "Hardware and software. All runs are performed on one {gpu} with {vram} GB "
       "of memory (compute capability {cc}), using PyTorch {torch_ver} with CUDA "
-      "{cuda_ver}, in bf16. The card is an interactive desktop GPU rather than a "
+      "{cuda_ver}. TinyLlama runs use bf16 and the larger-decoder check uses "
+      "4-bit quantisation. The card is an interactive desktop GPU rather than a "
       "dedicated node, so the wall-clock training times we quote are indicative "
       "only: the same configuration varied by a factor of about three across our "
       "runs depending on what else was using the display. Accuracies are "
@@ -399,8 +398,10 @@ BODY = [
       "attention heads over {llm_kv_heads} key-value heads). We had intended to "
       "use LLaMA-2-7B @@CITE:touvron2023llama2@@, since the mechanism is "
       "described for that class of model; it is gated on the model hub, and at 7B "
-      "parameters training with a cache prefix injected into every layer does not "
-      "fit into 16 GB. TinyLlama reproduces the LLaMA-2 architecture, including "
+      "parameters, training an unquantised model with a cache prefix injected "
+      "into every layer does not fit into 16 GB. Section 4.9 therefore uses a "
+      "separate 4-bit Mistral checkpoint for the larger-decoder check. "
+      "TinyLlama reproduces the LLaMA-2 architecture, including "
       "grouped-query attention @@CITE:ainslie2023gqa@@ and RoPE "
       "@@CITE:su2024roformer@@, so the mechanism is exercised faithfully at a "
       "smaller scale. Scale is nevertheless a genuine caveat on the conclusions, "
@@ -418,13 +419,16 @@ BODY = [
       "flag them as such wherever they arise."),
 ("P", "Baseline. A caption-style projection connector in the spirit of LLaVA\u2019s "
       "connector @@CITE:liu2023llava,liu2024llava15@@: the final-layer patch "
-      "features of the same frozen encoder are pooled to the same {n_visual} "
+      "features of the same frozen encoder are pooled to {n_visual} "
       "tokens, mapped into the language model\u2019s embedding space by a two-layer "
       "GELU MLP, normalised, and prepended to the prompt as a soft prefix. It "
       "carries {caption_params} trainable parameters against the bridge\u2019s "
       "{small_params}, so the baseline is the larger connector of the two; "
       "Section 4.6 removes this asymmetry by growing the bridge past the "
-      "baseline\u2019s budget. We do not quote published accuracies for LLaVA-1.5, "
+      "baseline\u2019s budget. The main bridge has 144 prefix tokens (four levels "
+      "of {n_visual} tokens each), while the caption baseline has {n_visual}; "
+      "Section 4.8 separately compares equal total prefix lengths. We do not "
+      "quote published accuracies for LLaVA-1.5, "
       "InstructBLIP, or visual prompt tuning: those systems use 7B-class language "
       "models and orders of magnitude more instruction data, so numbers obtained "
       "under our budget are not comparable with theirs, and we did not reproduce "
@@ -433,7 +437,8 @@ BODY = [
       "well-tuned language prior, since a frozen language model answers many VQA "
       "questions from the question text alone. Three controls are therefore "
       "reported. A blind system is trained under the identical protocol with a "
-      "learned soft prefix of the same length that never reads the image "
+      "learned soft prefix of the same length as the caption baseline that never "
+      "reads the image "
       "({blind_params} parameters); this establishes the language-prior floor. "
       "Every trained visual system is then additionally scored with the image "
       "stream rotated by one position, so that each question receives another "
@@ -441,35 +446,34 @@ BODY = [
       "zeroed for the bridge, the soft prefix zeroed for the baseline \u2014 so that "
       "the two systems are treated symmetrically."),
 ("H2", "4.2  Main comparison"),
-("P", "Table 2 reports VQA accuracy on the {eval_size} held-out questions of each "
+("P", "Table 2 reports accuracy on the {eval_size} held-out questions of each "
       "dataset after {steps} training steps under the shared protocol, with 95% "
       "bootstrap intervals."),
 ("TBL", "main"),
 ("P", "The caption-style connector is ahead on all three datasets, by "
       "{gap_vqav2} points on VQAv2, {gap_okvqa} on OK-VQA, and {gap_gqa} on "
-      "GQA-spatial. The gap is largest on GQA-spatial, which is precisely the "
-      "subset where the hierarchical cache was expected to help most. The blind "
-      "control sharpens the picture considerably: {blind_sentence} "
-      "{blind_verdict}, which is a stronger negative statement than the "
-      "baseline comparison alone, and it is the central result of this paper. "
-      "Since the blind control has {blind_params} trainable parameters against "
-      "the bridge\u2019s {small_params}, this cannot be explained by capacity either."),
+      "GQA-spatial. {vqa_main_paired} {ok_main_paired} On GQA-spatial the "
+      "95% intervals overlap, so the main run "
+      "does not by itself establish a reliable accuracy advantage for either "
+      "connector there. {gqa_main_paired} The clear default-bridge failures "
+      "are on VQAv2 and especially OK-VQA. The blind "
+      "control provides the other essential comparison: {blind_sentence} "
+      "{blind_verdict}. The central result is therefore not a uniform collapse, "
+      "but no consistent benefit from injecting the visual KV cache."),
 ("P", "{seed_sentence} Training loss shows the same picture from the optimisation "
       "side: the bridge starts from a much higher loss ({bridge_loss_first} "
       "against {caption_loss_first} for the baseline over the first 25 steps), "
       "because its output has to become compatible with an existing cache before "
       "it can be useful at all, and although it descends to {bridge_loss_last} \u2014 "
       "close to the baseline\u2019s {caption_loss_last} \u2014 that fitted training loss "
-      "does not translate into held-out accuracy. A connector that fits the "
-      "training answers as well as the baseline while generalising markedly worse "
-      "is the signature of a pathway the frozen decoder cannot read reliably, "
-      "which is what Section 5.3 examines directly."),
+      "does not by itself establish comparable held-out accuracy. This is why "
+      "Section 5.3 examines the frozen read-out path directly."),
 ("FIGNEW", "fig_main_accuracy.png"),
 ("CAP", "Figure 5. Accuracy of the three connectors under an identical training "
         "budget, with 95% bootstrap intervals, together with the "
         "mismatched-image control for the bridge. The baseline leads on all three "
-        "datasets, and the blind control \u2014 which never reads the image \u2014 is not "
-        "beaten by the bridge on every dataset."),
+        "datasets by point estimate. The blind control is stronger on VQAv2 and "
+        "OK-VQA but not on GQA-spatial."),
 ("H2", "4.3  Does the injected cache carry the image?"),
 ("P", "Table 3 answers the more basic question of whether the KV pathway "
       "transmits visual information at all. Because both conditions are scored on "
@@ -484,52 +488,41 @@ BODY = [
       "one of a connector that transmits nothing. The picture is not uniform "
       "across datasets, however. {grounding_sentence}; on VQAv2 the "
       "mismatched-image control costs only {delta_vqa_shuf}. The caption-style "
-      "baseline shows a clearer dependence on the correct image, "
-      "{delta_caption_shuf} on GQA-spatial, at a higher absolute level."),
-("P", "The direction of the disabled-cache control differs by dataset, and this "
-      "is the most interesting single observation in our measurements: "
-      "{novis_sentence} On VQAv2 the model is better off with no visual cache "
-      "than with the one the bridge provides. Many VQAv2 questions are answerable "
-      "from the question text plus dataset priors (\u201cIs there anyone wearing "
-      "glasses?\u201d), and on those an imperfectly aligned visual cache is worse than "
-      "none, because it perturbs the frozen language model\u2019s own distribution "
-      "without supplying reliable evidence. This is a concrete cost of injecting "
-      "into the attention rather than the embedding layer: an embedding-space "
-      "prefix that the decoder ignores is harmless, whereas cache entries sit in "
-      "every layer\u2019s attention and compete with the text for probability mass "
-      "whether or not they are informative. It also explains why the blind "
-      "control is competitive: for a frozen 1.1B decoder, an unreliable visual "
-      "signal in the cache can be worse than no signal at all."),
+      "baseline also depends on the correct image, {delta_caption_shuf} on "
+      "GQA-spatial, at a higher absolute level."),
+("P", "The disabled-cache controls give {novis_sentence} All three reductions "
+      "are significant, so the injected cache is useful on every dataset, but "
+      "it still does not translate into reliable "
+      "answers as often as the simpler caption-style projection. The fact that "
+      "the blind control remains stronger on VQAv2 and OK-VQA also shows how "
+      "much of those scores can be supplied by the frozen language prior alone."),
 ("P", "The two facts together delimit the finding: the mechanism transmits image "
       "information, and it transmits less usable image information than a plain "
       "embedding-space projection trained with the same budget."),
 ("H2", "4.4  Inference cost"),
 ("P", "Table 4 reports single-sample latency for one greedy answer of "
-      "{cost_new_tokens} tokens over {cost_repeats} questions after a warm-up, "
+      "at most {cost_new_tokens} tokens over {cost_repeats} questions after a warm-up, "
       "with the standard deviation across questions, together with the peak "
       "allocated memory of that pass."),
 ("TBL", "cost"),
-("P", "Injecting the cache costs {latency_pct} more latency than the "
-      "caption-style connector ({bridge_latency} \u00b1 {bridge_latency_sd} ms against "
-      "{caption_latency} \u00b1 {caption_latency_sd} ms). Peak memory is reported in "
+("P", "{latency_sentence} Peak memory is reported in "
       "MiB rather than GB because the two frozen backbones dominate it: the "
       "connectors differ by {bridge_mem_mb} MiB against {caption_mem_mb} MiB, "
       "which rounds to the same value in gigabytes and should not be read as "
-      "\u201cidentical\u201d. Top-K compression does not pay for itself here: dropping "
-      "tokens shortens the attention but adds a selection step, and with only "
-      "{n_visual_total} bridged tokens the second effect dominates. On the "
+      "\u201cidentical\u201d. {topk_sentence} On the "
       "training side the bridge took {bridge_train_s} s against the baseline\u2019s "
       "{caption_train_s} s on GQA-spatial, at peak memory of {bridge_train_mem} GB "
       "and {caption_train_mem} GB respectively."),
 ("H2", "4.5  Ablations"),
-("P", "Every ablation below changes exactly one thing about the bridge and is "
-      "trained on GQA-spatial with an identical budget of {abl_steps} steps, so "
-      "each delta is attributable to the component named. The reference row is the "
+("P", "Every ablation below applies one named intervention to the bridge and is "
+      "trained on GQA-spatial with an identical budget of {abl_steps} steps. "
+      "Associated parameter changes are reported rather than treated as "
+      "independent evidence. The reference row is the "
       "complete bridge at {abl_full} accuracy, and the interval on each row is "
       "about \u00b1{abl_ci_half} points."),
 ("TBL", "ablation"),
-("P", "Four readings stand out. The gate is the most important component. "
-      "Deleting it outright costs {abl_gate_delta} points and takes the system to "
+("P", "Four readings stand out. Removing the gate block is the largest single "
+      "ablation. Deleting it outright costs {abl_gate_delta} points and takes the system to "
       "{abl_gate}, but that variant also loses most of the bridge\u2019s parameters "
       "({abl_gate_params} against {small_params}), so the comparison confounds the "
       "mechanism with its capacity. We therefore also trained a matched control "
@@ -537,10 +530,11 @@ BODY = [
       "{abl_gate_fixed_params} in total, within 0.1% of the full bridge \u2014 and only "
       "replaces the learned per-token coefficient by a fixed even blend. "
       "{gate_verdict}. This is worth stating precisely, because it is easy to "
-      "over-attribute a gate ablation to the mechanism when most of the effect is "
-      "the parameter count: what the bridge needs is a prompt-derived signal of "
-      "the right magnitude in the cache, not necessarily a learned per-token "
-      "coefficient controlling it."),
+      "over-attribute a gate ablation to the mechanism when the intervention "
+      "also changes capacity. The fixed-blend control isolates the adaptive "
+      "coefficient, but it does not isolate the benefit of the prompt-derived "
+      "signal: the no-gate variant removes that signal and many parameters "
+      "together."),
 ("P", "Second, giving each of the {llm_layers} decoder layers its own learnable K "
       "and V scale \u2014 {abl_pls_params} parameters, {abl_pls_delta} points relative "
       "to the shared cache \u2014 tests the hypothesis of Section 5.3 that feeding "
@@ -566,8 +560,8 @@ BODY = [
 ("P", "Fourth, compression behaves monotonically: keeping 50% of the bridged "
       "tokens costs {abl_keep50_delta} points and keeping 25% costs "
       "{abl_keep25_delta}, the latter approaching the {abl_novis} obtained with no "
-      "visual cache at all. Aggressive Top-K selection removes exactly the "
-      "evidence the gate has learned to rely on."),
+      "visual cache at all. This is consistent with aggressive Top-K selection "
+      "discarding useful visual evidence."),
 ("H2", "4.6  Is the deficit a capacity problem?"),
 ("P", "The most obvious objection to Section 4.2 is that the bridge is simply too "
       "small, being the lighter of the two connectors. We tested this directly by "
@@ -576,13 +570,12 @@ BODY = [
       "which brackets the baseline\u2019s {caption_params}, and retraining each on "
       "GQA-spatial with the main-comparison budget."),
 ("TBL", "capacity"),
-("P", "Accuracy over that whole range moves by {cap_span} points "
-      "({cap_sentence}), comparable to the \u00b1{ci_half_typical}-point interval of a "
-      "single measurement, and the largest bridge \u2014 {cap_largest_params} "
-      "parameters, more than the baseline itself \u2014 reaches {cap_largest}. The "
-      "curve is flat where the baseline sits, so the comparison in Section 4.2 is "
-      "not an artefact of the parameter asymmetry. Whatever limits the method, it "
-      "is not the number of parameters in the adapter."),
+("P", "The sweep spans {cap_range} parameters ({cap_sentence}). "
+      "{capacity_verdict} {capacity_paired} The best configuration is selected on the same "
+      "held-out set and has not been repeated across seeds, so its ranking is "
+      "exploratory rather than a confirmed improvement. Rank and token count "
+      "both vary in this sweep; it tests connector configurations, not an "
+      "isolated dose of parameter count."),
 ("FIGNEW", "fig_capacity.png"),
 ("CAP", "Figure 7. Accuracy on GQA-spatial against the number of trainable bridge "
         "parameters, on a logarithmic axis, with the caption-style baseline and "
@@ -590,7 +583,8 @@ BODY = [
         "bootstrap intervals."),
 ("H2", "4.7  How much attention does the injected cache actually receive?"),
 ("P", "Sections 4.2 to 4.6 establish that visual information is present in the "
-      "cache and that more parameters do not help. The remaining possibility is "
+      "cache and that accuracy is sensitive to connector configuration. Another "
+      "possibility is "
       "that the frozen decoder does not read the injected tensors as readily as it "
       "reads an embedding-space prefix. This is directly measurable: for each "
       "decoder layer and head we accumulate the share of the attention "
@@ -605,38 +599,63 @@ BODY = [
       "embedding-space prefix receives {probe_caption_mass} against its own "
       "chance level of {probe_caption_chance}, a ratio of "
       "{probe_caption_ratio}. In other words, {probe_verdict}. The layer-wise "
-      "profile in Figure 8 shows the effect deepening with depth: the injected "
-      "cache takes {probe_mass_first_half} of the attention in the first half of "
-      "the decoder and {probe_mass_second_half} in the second, reaching "
-      "{probe_max_layer} at its peak, so by the upper layers the text is "
-      "attending almost exclusively to the visual prefix."),
+      "profile in Figure 8 is not uniform: the injected cache takes "
+      "{probe_mass_first_half} of the attention in the first half of the "
+      "decoder and {probe_mass_second_half} in the second, reaching "
+      "{probe_max_layer} at its peak layer."),
 ("FIGNEW", "fig_attention_mass.png"),
 ("CAP", "Figure 8. Share of text-token attention probability landing on the "
         "visual prefix, per decoder layer, for the injected KV cache and for the "
-        "baseline\u2019s embedding-space prefix, against the chance level of a uniform "
-        "reader."),
+        "baseline\u2019s embedding-space prefix. Dotted lines show each system\u2019s "
+        "own uniform-attention reference for its prefix length."),
 ("P", "This changes the diagnosis, and we prefer to state the revised one "
       "rather than the one we expected. The problem is not that the frozen "
       "decoder ignores the injected cache; it is that {n_visual_total} bridged "
       "tokens sitting in every layer\u2019s attention absorb almost all of the "
       "available probability mass, leaving the question text with very little. "
-      "The baseline\u2019s prefix is shorter and, more importantly, the decoder is "
-      "free to discount it: a soft prompt competes for attention only in the "
-      "first layer\u2019s representation and is thereafter mixed into the residual "
-      "stream, whereas cache entries compete afresh in all {llm_layers} layers "
-      "and cannot be discounted below what their keys earn. Taken with the loss "
+      "The baseline\u2019s prefix is shorter and is re-encoded by the frozen decoder "
+      "at every layer. Its keys and values can therefore change with depth, "
+      "whereas the default bridge reuses the same tensors in all {llm_layers} "
+      "layers. Both kinds of prefix remain visible to attention throughout the "
+      "decoder; the distinction is how their per-layer representations are "
+      "produced. Taken with the loss "
       "curves of Section 4.2 \u2014 comparable training loss, much worse held-out "
-      "accuracy \u2014 and with the VQAv2 control of Section 4.3, where switching the "
-      "cache off improves accuracy, the picture is consistent: the injected "
-      "cache displaces the language prior that the frozen decoder relies on, "
-      "and it is not accurate enough to replace it. This is a length-and-"
-      "dominance problem rather than a capacity problem, which is why adding "
-      "parameters (Section 4.6) does not help, and it predicts that a shorter "
-      "or more strongly gated cache should recover accuracy \u2014 consistent with "
-      "the compression rows of Table 5, where keeping half the tokens costs "
-      "almost nothing."),
+      "accuracy \u2014 and with the disabled-cache controls of Section 4.3, the "
+      "picture is consistent: the injected "
+      "cache may displace part of the language prior that the frozen decoder "
+      "relies on. The capacity results rule out a simple monotonic capacity "
+      "account, but do not make attention crowding the sole explanation. "
+      "The matched-length and scaling controls below test this diagnosis more "
+      "directly."),
+
+("H2", "4.8  Matched prefix-length and attention-allocation controls"),
+("P", "To separate the injection mechanism from its length, we retrained both "
+      "systems on GQA-spatial with 24, 36, 72, and 144 prefix tokens under an "
+      "{prefix_steps}-step protocol. {prefix_verdict} Table 8 reports the "
+      "confidence and paired-difference intervals."),
+("TBL", "prefix"),
+("P", "To test attention allocation more directly, we multiplied both bridged "
+      "keys and values by a fixed factor after the adaptive gate: {kv_sentence}. "
+      "{kv_verdict} These runs also use {prefix_steps} steps. Because the "
+      "intervention scales values as well as keys, "
+      "it changes both attention logits and the magnitude of the attended "
+      "visual contribution. It therefore does not isolate attention crowding "
+      "from value scaling. The results motivate, but do not validate, the "
+      "layer-adaptive KV-retention direction represented by DynamicKV "
+      "@@CITE:zhou2024dynamickv@@; our implementation is a global scale rather "
+      "than a per-layer budget."),
+
+("H2", "4.9  Larger-decoder check"),
+("P", "{mistral_sentence} {mistral_verdict} {mistral_paired} "
+      "{mistral_grounding} This section is a single-dataset sensitivity "
+      "check rather than a full reimplementation of the entire study on 7B; it "
+      "does, however, use the same optimisation budget and evaluation size as "
+      "the TinyLlama main comparison. The Mistral caption connector has "
+      "{mistral_caption_params} trainable parameters against the bridge's "
+      "{mistral_bridge_params}, so this is an ordering check rather than a "
+      "capacity-matched comparison."),
 ("H1", "5  Analysis"),
-("H2", "5.1  Key-value scale calibration decides whether the method works"),
+("H2", "5.1  Keys and values require separate scale calibration"),
 ("P", "The most consequential thing we learned is numerical rather than "
       "architectural. In the host model the two halves of the cache do not live on "
       "the same scale: measured over all {llm_layers} layers on a real batch, the "
@@ -644,12 +663,14 @@ BODY = [
       "{v_std}, roughly {kv_ratio} times apart. Our first implementation "
       "normalised the concatenated keys and values with a single shared LayerNorm "
       "@@CITE:ba2016layernorm@@, which emitted both at unit scale. The injected "
-      "values were then far larger than the values the host model produces itself, "
-      "so after the softmax the visual entries dominated every attention head and "
-      "the output no longer depended on the image. The symptom was unmistakable "
-      "once we knew to look for it: accuracy with the correct image, with "
-      "mismatched images, and with no visual cache were identical to the decimal "
-      "point, which is exactly what a saturated attention looks like."),
+      "keys and values were both far from the host statistics. Key scale affects "
+      "attention logits, whereas value scale affects the magnitude of the visual "
+      "contribution after attention; value magnitude alone cannot make attention "
+      "weights saturate. In that earlier implementation, correct, mismatched, "
+      "and disabled-image conditions produced identical scores to the decimal "
+      "point, showing that the pathway did not transmit usable image-dependent "
+      "signal. We do not use that observation to attribute the failure to one "
+      "half of the cache."),
 ("FIGNEW", "fig_kv_scale.png"),
 ("CAP", "Figure 9. Standard deviation of the host model\u2019s own keys and values at "
         "each decoder layer, on a logarithmic axis, with the bridged tensors for "
@@ -658,14 +679,23 @@ BODY = [
 ("P", "The fix is to normalise keys and values separately and to multiply each by "
       "its own learnable scalar initialised to the host statistic measured on a "
       "probe batch at start-up. That is three lines of code, and it is the "
-      "difference between a bridge that transmits nothing and the results in "
-      "Table 3. We emphasise it because it generalises beyond this paper: any "
+      "calibration used by the working implementation in Table 3; the other "
+      "consistency fixes are described separately. We emphasise it because it "
+      "generalises beyond this paper: any "
       "method that writes into a pretrained model\u2019s KV cache inherits that "
       "cache\u2019s numerical conventions, and the common practice of ending an adapter "
       "with a plain LayerNorm silently violates them. The control conditions of "
       "Section 4.1 are what made the failure visible, which is an argument for "
       "running them by default."),
 ("H2", "5.2  Other implementation traps"),
+("P", "Two further consistency errors were found during revision. The prompt "
+      "summary originally included gold-answer tokens during training but not "
+      "during inference, and the inference path also averaged left padding. "
+      "Both paths now use the masked question-only mean specified in Section "
+      "3.5. Separately, the caption and blind systems were instantiated with "
+      "their default 25-token prefix even when the configuration recorded 36. "
+      "The configured length is now propagated explicitly. All affected runs "
+      "were repeated after these corrections."),
 ("P", "Four further defects produced plausible-looking but wrong results before "
       "being found, and all four are specific to writing into a decoder cache. "
       "Evaluating with right-padded prompts makes generation continue from a pad "
@@ -692,16 +722,17 @@ BODY = [
       "simultaneously valid for every layer\u2019s expectations. The attention probe of "
       "Section 4.7 shows the consequence at the level of the mechanism rather than "
       "the metric, and it is an asymmetry of control rather than of access. A soft "
-      "prefix at the embedding layer can be discounted by the frozen network: the "
-      "measured attention on the baseline\u2019s prefix is {probe_caption_ratio} times "
-      "a uniform reader\u2019s share, so the decoder is actively down-weighting it in "
-      "favour of the question. Cache entries cannot be discounted that way. They "
-      "are re-read by all {llm_layers} layers, their weight is set by their own "
-      "keys, and with {n_visual_total} of them the measured attention is "
+      "prefix at the embedding layer can be discounted by the frozen network: "
+      "the measured attention on the baseline\u2019s prefix is "
+      "{probe_caption_ratio} times a uniform reader\u2019s share. The default "
+      "bridge reuses its cache tensors at "
+      "all {llm_layers} layers rather than having the decoder re-encode them. "
+      "With {n_visual_total} entries the measured attention is "
       "{probe_ratio} times a uniform share \u2014 the text is almost crowded out. "
-      "Since the attention weights are frozen, the bridge cannot buy its way out "
-      "of this by getting larger, which is exactly what the capacity sweep of "
-      "Section 4.6 finds."),
+      "The capacity sweep does not support a simple monotonic account in which "
+      "a larger bridge necessarily reads better. It also does not establish "
+      "attention crowding as the sole cause, because capacity and prefix length "
+      "vary together in that sweep."),
 ("P", "This is also where the comparison with Flamingo "
       "@@CITE:alayrac2022flamingo@@ becomes informative. Flamingo likewise makes "
       "visual information available inside the attention of a frozen decoder, but "
@@ -712,10 +743,9 @@ BODY = [
       "free parameters optimised directly against the task, whereas ours are "
       "constrained to be a function of the vision encoder\u2019s cache. Our results "
       "suggest that the combination we chose \u2014 a frozen read-out path and a "
-      "constrained injection \u2014 is the hardest of the three, and that the "
-      "trainable-read-out choice made by Flamingo and LLaMA-Adapter "
-      "@@CITE:zhang2024llamaadapter@@ is doing more work than it may appear to."),
-("P", "Two directions follow, and we state them as untested hypotheses rather "
+      "constrained injection \u2014 is difficult to optimise at this budget. They "
+      "do not show that it must be harder than trainable read-out in general."),
+("P", "Three directions follow, and we state them as untested hypotheses rather "
       "than as future results. First, a per-layer bridge, of which the per-layer "
       "scaling of Section 4.5 is the cheapest one-parameter approximation. Second, "
       "a two-phase schedule that first regresses the bridged cache onto the host "
@@ -738,7 +768,8 @@ BODY = [
       "question, an empty string, or a repeated token in {deg_bridge} of the "
       "{n_samples} logged cases, against {deg_caption} for the baseline. The "
       "bridge\u2019s training loss on this dataset nevertheless falls from "
-      "{bridge_loss_first} to a value comparable with its GQA runs, so this is a "
+      "{ok_loss_first} to {ok_loss_last}, compared with {bridge_loss_last} on "
+      "GQA-spatial, so this is a "
       "generalisation failure of the pathway and not a failure to optimise. We "
       "read it as the same effect as in Section 4.3 in a more demanding regime: "
       "an unreliable cache in every attention layer degrades a frozen decoder\u2019s "
@@ -757,10 +788,10 @@ BODY = [
       "model is also operating near the limit of its instruction-following "
       "ability."),
 ("H1", "6  Limitations"),
-("B", "Cache-bridging is behind the caption-style baseline on all three datasets "
-      "under our budget, and on GQA-spatial it is also behind a control that never "
-      "sees the image. We report the mechanism, the measurements, and a diagnosis; "
-      "we do not claim an accuracy advantage."),
+("B", "The default cache bridge is behind the caption-style baseline by point "
+      "estimate on all three datasets under our budget. It exceeds the blind "
+      "control on GQA-spatial but not on VQAv2 or OK-VQA. We do not claim a "
+      "consistent accuracy advantage."),
 ("B", "The language model is TinyLlama-1.1B-Chat @@CITE:zhang2024tinyllama@@, not "
       "the 7B-class model for which the mechanism is described "
       "@@CITE:touvron2023llama2@@. The conclusion may not transfer across an order "
@@ -776,11 +807,34 @@ BODY = [
       "about \u00b1{ci_half_typical} points, and the ablations use a single dataset at "
       "{abl_steps} steps with one run per variant. Individual ablation deltas "
       "smaller than the interval are not interpretable, and we mark them where "
-      "they occur; the main comparison and the capacity sweep are the claims that "
-      "the statistics support."),
+      "they occur; the capacity ranking is explicitly treated as exploratory."),
 ("B", "Seed repeats cover the main GQA-spatial comparison for both systems. We "
       "did not repeat the ablations or the capacity sweep across seeds, so their "
       "rows carry the single-run interval only."),
+("B", "The capacity sweep selects its best row on the reported held-out set and "
+      "varies rank and tokens per level together. It is an exploratory "
+      "configuration sweep, not a confirmatory comparison of parameter count "
+      "alone."),
+("B", "The joint key/value scaling control changes attention allocation and "
+      "value magnitudes together. It cannot identify which of those pathways "
+      "accounts for an accuracy change."),
+("B", "The train/evaluation split is by question-answer pair rather than by "
+      "image. Shared images occur across the partitions, particularly in "
+      "GQA-spatial, so the scores should not be interpreted as unseen-image "
+      "generalisation."),
+("B", "Bootstrap intervals resample questions independently. They do not "
+      "model correlation between multiple questions about the same image, "
+      "which is especially relevant to GQA-spatial, so those intervals may be "
+      "optimistic."),
+("B", "OK-VQA uses its ten human references, whereas the VQAv2 source used here "
+      "provides only the majority answer and GQA provides one reference. Scores "
+      "on the latter two datasets are normalised exact match rather than a full "
+      "ten-annotator VQA soft score."),
+("B", "The larger-decoder check uses one 4-bit Mistral-7B-Instruct-v0.2 "
+      "checkpoint and the GQA-spatial protocol, not all datasets and all "
+      "ablations. It should not be read as a full 7B reimplementation of the "
+      "study, and it is not "
+      "parameter-matched at 7B scale."),
 ("B", "The four-level hierarchy is not supported by our own ablations: single "
       "levels are within a couple of points of the full stack and removing some "
       "levels helps (Section 4.5). We keep the hierarchy in the specification "
@@ -803,42 +857,44 @@ BODY = [
       "scoring with mismatched inputs and against a blind control. We would "
       "encourage reporting such controls as a matter of routine."),
 ("H1", "8  Conclusion"),
-("P", "We presented cache-bridging, a mechanism that injects a four-level "
-      "hierarchical visual KV cache into a frozen language model\u2019s per-layer "
-      "attention through a shared low-rank, geometry-preserving, prompt-gated "
-      "bridge, and evaluated it under a controlled equal-budget protocol on "
-      "{eval_size} held-out questions from each of VQAv2, OK-VQA, and "
-      "relation-heavy GQA. The mechanism demonstrably transmits visual "
-      "information: pairing questions with the wrong image costs "
-      "{delta_gqa_shuf} on GQA-spatial, and the gate is necessary for that to "
-      "happen at all. It also does not beat a simpler caption-style projection "
-      "trained with the same budget, and on GQA-spatial it does not beat a "
-      "question-only control. Three measurements locate the cause: capacity is "
-      "not the constraint, since a sweep over {cap_range} parameters moves "
-      "accuracy by {cap_span} points; the injected prefix does not suffer from "
-      "neglect but from dominance, taking {probe_ratio} times a uniform reader\u2019s "
-      "share of the attention in every layer against {probe_caption_ratio} for an "
-      "embedding-space prefix the decoder is free to discount; and giving each "
-      "layer its own scale does not close the gap. We additionally document the key-value scale mismatch that "
-      "silently disables the whole approach, and the control conditions that "
-      "expose it. Our conclusion is that injecting into a frozen read-out path is "
-      "the binding constraint, and that methods in this family should either make "
-      "the read-out path trainable, as gated cross-attention does, or align the "
-      "injected cache to the host\u2019s per-layer statistics before optimising the "
-      "task loss, and should treat the length of the injected cache as a "
-      "first-class hyperparameter rather than a compression afterthought. We "
-      "release the code, the deterministic driver scripts, and every "
-      "raw result file, so that both halves of this finding can be checked and, we "
-      "hope, improved upon."),
+("P", "We presented cache-bridging and evaluated it under a controlled "
+      "equal-budget protocol on VQAv2, OK-VQA, and relation-heavy GQA. The "
+      "bridge does not establish a consistent advantage over a simpler "
+      "caption-style projection or a question-only control: it remains behind "
+      "the blind control on VQAv2 and OK-VQA, while on GQA-spatial it exceeds "
+      "the blind control but remains below the caption baseline by point "
+      "estimate. Capacity changes GQA-spatial accuracy, and one larger "
+      "configuration exceeds the caption point estimate without yet "
+      "establishing a reproducible advantage. Matched prefix lengths and joint "
+      "key/value scaling narrow the possible explanations but do not isolate a "
+      "single cause; the Mistral-7B run remains a limited sensitivity check. "
+      "The injected cache does "
+      "not simply fail to attract attention: at 144 tokens it dominates the "
+      "attention, but reducing its scale is only a partial remedy. Together "
+      "with the key/value calibration finding, this points to the frozen "
+      "read-out path as one constraint. Follow-up work should test trainable "
+      "read-out layers, alignment of the injected cache to each layer's "
+      "statistics before task optimisation, and explicit control of prefix "
+      "length and attention allocation. "
+      "The revision archive contains code, deterministic scripts, and every "
+      "raw result file so that the negative result and its diagnosis can be "
+      "checked and extended."),
 ]
 
 DATA_AVAILABILITY = (
-    "The source code, configuration files, and experimental reproduction scripts "
-    "supporting this study are publicly available in the GitHub repository at "
-    "https://github.com/c1326239247-coder/lab. This study did not generate new "
-    "datasets; all experiments were conducted on publicly available datasets, "
-    "namely VQAv2, OK-VQA, and GQA, which can be obtained from their original "
-    "sources as cited in this article."
+    "No new images or human annotations were collected. All experiments use "
+    "the public VQAv2, OK-VQA, and GQA datasets cited in this article. The "
+    "GQA-spatial subset is produced by the deterministic filter in the "
+    "released code."
+)
+
+CODE_AVAILABILITY = (
+    "The source code, configuration files, raw results, and experimental "
+    "reproduction scripts supporting this study are included in the revision "
+    "archive. The project repository is "
+    "https://github.com/c1326239247-coder/lab. The public revision and a "
+    "versioned archive in a DOI-assigning repository will be linked at this "
+    "location before resubmission."
 )
 
 COMPETING_INTERESTS = (
@@ -852,23 +908,26 @@ COMPETING_INTERESTS = (
 
 APPENDIX = [
 ("H1", "Appendix A  Code release"),
-("P", "The implementation is released at "
-      "https://github.com/c1326239247-coder/lab and contains:"),
+("P", "The implementation and revision materials are prepared for release at "
+      "https://github.com/c1326239247-coder/lab. The accompanying archive "
+      "contains:"),
 ("B", "cache_bridge_torch/: the PyTorch bridge modules (low-rank projection, "
       "2D-geometry-preserving attention, adaptive gate) and their unit tests;"),
 ("B", "cache_bridge/: a dependency-free NumPy reference implementation of the "
       "same mechanism, used for module-level smoke tests;"),
 ("B", "experiments/: the scripts that produced every number in this paper \u2014 "
-      "common.py (datasets, the VQA metric, the bootstrap intervals, and the "
+      "common.py (datasets, VQA-style scoring, the bootstrap intervals, and the "
       "determinism settings), model.py (all three systems), run_vqa.py (train and "
       "evaluate one configuration), the drivers run_main.py, run_ablations.py, "
-      "run_seeds.py, run_capacity.py, run_cost.py and run_all.py, the diagnostic "
-      "probe probe.py, and the summarisation scripts summarize.py and report.py;"),
+      "run_seeds.py, run_capacity.py, run_cost.py and run_all.py, paired system "
+      "comparisons in compare_systems.py, the diagnostic probe probe.py, and the "
+      "summarisation scripts summarize.py and report.py;"),
 ("B", "results/: the raw JSON produced by each run, including the per-run "
       "configuration, the hardware report, the measured host KV statistics, the "
       "accuracies and bootstrap intervals under all control conditions, the "
       "per-question scores, and sample predictions;"),
-("B", "paper_figures/: Figures 5 to 9, regenerated from results/ by report.py;"),
+("B", "paper_figures/: the reviewer-labelled Figure 1 and Figures 5 to 9, "
+      "with the latter regenerated from results/ by report.py;"),
 ("B", "rewrite/: the scripts that assemble this manuscript, which read every "
       "reported quantity out of results/ and every reference out of a keyed "
       "bibliography, so that no number in the text can drift away from the run "
@@ -879,10 +938,13 @@ APPENDIX = [
       "skips runs whose result file already exists. A single main configuration "
       "trains in about {bridge_train_s_min} minutes on one {gpu}; reproducing the "
       "main comparison, the seed repeats, the ablations, the capacity sweep, and "
-      "the cost measurement takes about {total_gpu_hours} GPU-hours on the same "
-      "card. The NumPy reference implementation runs on any laptop CPU in seconds. "
-      "Runs are deterministic: at a fixed seed on the same machine a configuration "
-      "reproduces its per-question scores exactly, which required replacing "
+      "matched controls takes about {total_gpu_hours} GPU-hours on the same "
+      "card, excluding the separate attention probes, cost measurement, "
+      "downloads, and document generation. The NumPy reference implementation "
+      "runs on any laptop CPU in seconds. "
+      "TinyLlama runs are deterministic: at a fixed seed on the same machine a "
+      "configuration reproduces its per-question scores exactly in the repeated "
+      "configurations checked here, which required replacing "
       "adaptive average pooling with an explicit block mean and disabling the "
       "fused attention backward (Section 3.5). The work builds on the public CLIP "
       "@@CITE:radford2021clip@@ and TinyLlama @@CITE:zhang2024tinyllama@@ "
@@ -915,7 +977,9 @@ APPENDIX = [
       "{n_torch_tests} forward-and-backward properties in PyTorch, covering the "
       "low-rank projection, the geometry-preserving attention, the adaptive gate, "
       "both injection modes, the end-to-end forward pass, and the bridge parameter "
-      "count; and cache_bridge/tests/run_all.py exercises the NumPy reference "
+      "count; test_prompt_summary.py adds {n_prompt_tests} regression checks that "
+      "answer tokens and left padding cannot change the gate summary; and "
+      "cache_bridge/tests/run_all.py exercises the NumPy reference "
       "implementation with {n_numpy_tests} module-level smoke tests. The synthetic "
       "generator in cache_bridge/data.py renders 32 \u00d7 32 RGB scenes in which the "
       "position of a highlighted patch encodes object identity and its colour "

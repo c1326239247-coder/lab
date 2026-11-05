@@ -7,8 +7,9 @@ spread is measured under identical conditions.  Seed 0 is the main run.
 
 import os
 import subprocess
+import sys
 
-PY = os.path.join(".venv", "Scripts", "python.exe")
+PY = sys.executable
 SCRIPT = os.path.join("experiments", "run_vqa.py")
 
 BASE = ["--dataset", "GQA-spatial", "--train-size", "3000",

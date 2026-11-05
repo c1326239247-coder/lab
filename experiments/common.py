@@ -102,7 +102,8 @@ def load_vqav2(limit):
 
     The split is sharded; shards are pulled in order until `limit` rows
     are available, so the evaluation set can be enlarged without changing
-    the sampling procedure.
+    the sampling procedure. This source provides only the majority answer,
+    so the VQA-style score below reduces to normalised exact match.
     """
     from huggingface_hub import hf_hub_download
     import pyarrow.parquet as pq
@@ -204,7 +205,11 @@ def normalize_answer(text):
 
 
 def vqa_accuracy(prediction, ground_truths):
-    """Official VQA accuracy: min(#humans that said it / 3, 1)."""
+    """VQA-style soft score: min(#matching references / 3, 1).
+
+    With the single-reference VQAv2 and GQA loaders this is exact match after
+    normalisation; OK-VQA retains its ten human references.
+    """
     pred = normalize_answer(prediction)
     if not pred:
         return 0.0

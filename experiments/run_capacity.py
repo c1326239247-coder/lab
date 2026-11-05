@@ -9,8 +9,9 @@ budget, under the main-comparison protocol.
 
 import os
 import subprocess
+import sys
 
-PY = os.path.join(".venv", "Scripts", "python.exe")
+PY = sys.executable
 SCRIPT = os.path.join("experiments", "run_vqa.py")
 
 BASE = ["--dataset", "GQA-spatial", "--system", "bridge",
@@ -25,6 +26,7 @@ POINTS = [
     ("cap_rank256", "256", "36"),
     ("cap_rank512", "512", "64"),
     ("cap_rank1024", "1024", "64"),
+    ("cap_rank2304", "2304", "64"),
 ]
 
 

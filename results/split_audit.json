@@ -1,0 +1,23 @@
+{
+  "VQAv2": {
+    "evaluation_questions": 2000,
+    "training_questions": 3000,
+    "evaluation_unique_images": 1927,
+    "training_unique_images": 2799,
+    "shared_images": 209
+  },
+  "OK-VQA": {
+    "evaluation_questions": 2000,
+    "training_questions": 3000,
+    "evaluation_unique_images": 2000,
+    "training_unique_images": 2993,
+    "shared_images": 5
+  },
+  "GQA-spatial": {
+    "evaluation_questions": 2000,
+    "training_questions": 3000,
+    "evaluation_unique_images": 377,
+    "training_unique_images": 390,
+    "shared_images": 374
+  }
+}

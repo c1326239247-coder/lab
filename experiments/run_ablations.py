@@ -10,8 +10,9 @@ of roughly +/-2 points rather than +/-4.
 
 import os
 import subprocess
+import sys
 
-PY = os.path.join(".venv", "Scripts", "python.exe")
+PY = sys.executable
 SCRIPT = os.path.join("experiments", "run_vqa.py")
 
 BASE = ["--dataset", "GQA-spatial", "--system", "bridge",

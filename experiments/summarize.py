@@ -38,7 +38,7 @@ def main():
                 eval_size = run["config"]["eval_size"]
 
     print("")
-    print("Table: VQA accuracy (%%) with 95%% bootstrap CI, %s held-out "
+    print("Table: accuracy (%%) with 95%% bootstrap CI, %s held-out "
           "questions per dataset" % eval_size)
     print("-" * 92)
     header = "%-36s" % "System"

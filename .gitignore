@@ -12,8 +12,23 @@ python311_embed/
 # Hugging Face cache
 .hf/
 
+# Model weights (Mistral 4-bit check, downloaded separately)
+models/
+
 # Tool caches
 .codegraph/
+
+# Superseded result trees kept locally for the revision audit trail only
+results_v*/
+results_caption25bug/
+
+# Fast smoke runs are not paper evidence
+results/run_smoke_*.json
+
+# Rendered deliverables and the manuscript template are not part of the code archive
+dist/
+qa_*/
+rewrite/template.docx
 
 # OS / editor
 Thumbs.db
