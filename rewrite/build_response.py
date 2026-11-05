@@ -102,13 +102,13 @@ def items():
               "prefix mode from optional routing strategies."),
         ("H2", "6. DOI-assigning code archive"),
         ("P", "Response: A dedicated Code Availability section now accompanies "
-              "Data Availability. The code, raw results, and reproduction "
-              "scripts are organised for archiving at "
-              "https://github.com/c1326239247-coder/lab. A versioned Zenodo "
-              "archive and DOI still need to be created, and the public "
-              "repository still needs to be updated with this revision. The "
-              "manuscript explicitly reserves the link location. We do not "
-              "represent either external step as complete."),
+              "Data Availability. The corrected code, raw results, and "
+              "reproduction scripts are now public at "
+              "https://github.com/c1326239247-coder/lab under the tag "
+              "revision-2026-11. The remaining step is the versioned Zenodo "
+              "archive and its DOI, which will be inserted at the reserved "
+              "location before resubmission; we do not represent that "
+              "deposition as complete."),
         ("H1", "Reviewer 1"),
         ("H2", "1. Uniform prefix burden and DynamicKV"),
         ("P", "Response: Sections 2.3, 4.8, and 5.3 now cite and discuss "

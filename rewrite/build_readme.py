@@ -254,6 +254,9 @@ Discussed in Sections 3.5, 5.1 and 5.2 of the paper:
 }}
 ```
 
+A DOI for this revision will be added here once the versioned archive is
+published in a DOI-assigning repository.
+
 ## License
 
 MIT, see `LICENSE`. The CLIP and TinyLlama checkpoints and the three datasets

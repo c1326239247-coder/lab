@@ -32,8 +32,7 @@ ABSTRACT = (
     "advantage across configurations. Matched-prefix and joint key/value "
     "scaling controls, attention probes, and a Mistral-7B sensitivity check "
     "implicate the frozen read-out path without isolating a single cause. "
-    "The revision archive contains the code, deterministic scripts, and every "
-    "raw result file."
+    "The code, deterministic scripts, and every raw result file are released."
 )
 
 KEYWORDS = ("Keywords: Cache-Bridging; Vision-Language Models; KV Cache; "
@@ -876,9 +875,9 @@ BODY = [
       "read-out layers, alignment of the injected cache to each layer's "
       "statistics before task optimisation, and explicit control of prefix "
       "length and attention allocation. "
-      "The revision archive contains code, deterministic scripts, and every "
-      "raw result file so that the negative result and its diagnosis can be "
-      "checked and extended."),
+      "Code, deterministic scripts, and every raw result file are released so "
+      "that the negative result and its diagnosis can be checked and "
+      "extended."),
 ]
 
 DATA_AVAILABILITY = (
@@ -890,11 +889,10 @@ DATA_AVAILABILITY = (
 
 CODE_AVAILABILITY = (
     "The source code, configuration files, raw results, and experimental "
-    "reproduction scripts supporting this study are included in the revision "
-    "archive. The project repository is "
-    "https://github.com/c1326239247-coder/lab. The public revision and a "
-    "versioned archive in a DOI-assigning repository will be linked at this "
-    "location before resubmission."
+    "reproduction scripts supporting this study are publicly available at "
+    "https://github.com/c1326239247-coder/lab, tagged revision-2026-11. A "
+    "versioned archive with a DOI in a DOI-assigning repository will be linked "
+    "at this location before resubmission."
 )
 
 COMPETING_INTERESTS = (
@@ -908,9 +906,9 @@ COMPETING_INTERESTS = (
 
 APPENDIX = [
 ("H1", "Appendix A  Code release"),
-("P", "The implementation and revision materials are prepared for release at "
-      "https://github.com/c1326239247-coder/lab. The accompanying archive "
-      "contains:"),
+("P", "The implementation is released at "
+      "https://github.com/c1326239247-coder/lab under the tag "
+      "revision-2026-11 and contains:"),
 ("B", "cache_bridge_torch/: the PyTorch bridge modules (low-rank projection, "
       "2D-geometry-preserving attention, adaptive gate) and their unit tests;"),
 ("B", "cache_bridge/: a dependency-free NumPy reference implementation of the "
