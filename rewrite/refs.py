@@ -34,44 +34,52 @@ REFS = [
      "language model. arXiv preprint, 2024. arXiv:2401.02385."),
     ("su2024roformer",
      "Su J, Ahmed M, Lu Y, et al. RoFormer: Enhanced transformer with rotary "
-     "position embedding. Neurocomputing, 2024, 568: 127063."),
+     "position embedding. Neurocomputing, 2024, 568: 127063. "
+     "doi:10.1016/j.neucom.2023.127063."),
     ("ainslie2023gqa",
      "Ainslie J, Lee-Thorp J, de Jong M, et al. GQA: Training generalized "
      "multi-query transformer models from multi-head checkpoints. In: "
-     "Proceedings of EMNLP, 2023. arXiv:2305.13245."),
+     "Proceedings of the 2023 Conference on Empirical Methods in Natural "
+     "Language Processing (EMNLP), 2023: 4895-4901. arXiv:2305.13245. "
+     "doi:10.18653/v1/2023.emnlp-main.298."),
     ("hu2022lora",
      "Hu E J, Shen Y, Wallis P, et al. LoRA: Low-rank adaptation of large "
      "language models. In: International Conference on Learning "
      "Representations (ICLR), 2022. arXiv:2106.09685."),
     ("li2021prefix",
      "Li X L, Liang P. Prefix-tuning: Optimizing continuous prompts for "
-     "generation. In: Proceedings of ACL-IJCNLP, 2021. arXiv:2101.00190."),
+     "generation. In: Proceedings of the 59th Annual Meeting of the "
+     "Association for Computational Linguistics and the 10th International "
+     "Joint Conference on Natural Language Processing (ACL-IJCNLP), 2021: "
+     "4582-4597. arXiv:2101.00190. "
+     "doi:10.18653/v1/2021.acl-long.353."),
     ("liu2022ptuningv2",
      "Liu X, Ji K, Fu Y, et al. P-Tuning v2: Prompt tuning can be comparable "
-     "to fine-tuning universally across scales and tasks. In: Proceedings of "
-     "ACL, 2022. arXiv:2110.07602."),
+     "to fine-tuning universally across scales and tasks. arXiv preprint, "
+     "2021. arXiv:2110.07602."),
     ("zhang2024llamaadapter",
      "Zhang R, Han J, Liu C, et al. LLaMA-Adapter: Efficient fine-tuning of "
      "language models with zero-init attention. In: International Conference "
      "on Learning Representations (ICLR), 2024. arXiv:2303.16199."),
     ("jia2022vpt",
      "Jia M, Tang L, Chen B C, et al. Visual prompt tuning. In: Proceedings "
-     "of the European Conference on Computer Vision (ECCV), 2022. "
-     "arXiv:2203.12119."),
+     "of the European Conference on Computer Vision (ECCV), 2022: 709-727. "
+     "arXiv:2203.12119. doi:10.1007/978-3-031-19827-4_41."),
     ("zhou2022coop",
      "Zhou K, Yang J, Loy C C, Liu Z. Learning to prompt for vision-language "
      "models. International Journal of Computer Vision, 2022, 130(9): "
-     "2337-2348."),
+     "2337-2348. doi:10.1007/s11263-022-01653-1."),
     ("liu2021swin",
      "Liu Z, Lin Y, Cao Y, et al. Swin Transformer: Hierarchical vision "
      "transformer using shifted windows. In: Proceedings of the IEEE/CVF "
-     "International Conference on Computer Vision (ICCV), 2021. "
-     "arXiv:2103.14030."),
+     "International Conference on Computer Vision (ICCV), 2021: 9992-10002. "
+     "arXiv:2103.14030. doi:10.1109/ICCV48922.2021.00986."),
     ("dong2022cswin",
      "Dong X, Bao J, Chen D, et al. CSWin Transformer: A general vision "
      "transformer backbone with cross-shaped windows. In: Proceedings of the "
      "IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR), "
-     "2022. arXiv:2107.00652."),
+     "2022: 12114-12124. arXiv:2107.00652. "
+     "doi:10.1109/CVPR52688.2022.01181."),
     ("xiao2024streamingllm",
      "Xiao G, Tian Y, Chen B, Han S, Lewis M. Efficient streaming language "
      "models with attention sinks. In: International Conference on Learning "
@@ -96,7 +104,7 @@ REFS = [
     ("alayrac2022flamingo",
      "Alayrac J B, Donahue J, Luc P, et al. Flamingo: A visual language "
      "model for few-shot learning. In: Advances in Neural Information "
-     "Processing Systems (NeurIPS), 2022, 35: 23716-23736. arXiv:2204.14198."),
+     "Processing Systems (NeurIPS), 2022, 35. arXiv:2204.14198."),
     ("tsimpoukelli2021frozen",
      "Tsimpoukelli M, Menick J, Cabi S, et al. Multimodal few-shot learning "
      "with frozen language models. In: Advances in Neural Information "
@@ -113,7 +121,8 @@ REFS = [
     ("liu2024llava15",
      "Liu H, Li C, Li Y, Lee Y J. Improved baselines with visual instruction "
      "tuning. In: Proceedings of the IEEE/CVF Conference on Computer Vision "
-     "and Pattern Recognition (CVPR), 2024. arXiv:2310.03744."),
+     "and Pattern Recognition (CVPR), 2024: 26286-26296. arXiv:2310.03744. "
+     "doi:10.1109/CVPR52733.2024.02484."),
     ("liu2024llavanext",
      "Liu H, Li C, Li Y, et al. LLaVA-NeXT: Improved reasoning, OCR, and "
      "world knowledge. Technical report, January 2024. "
@@ -133,22 +142,25 @@ REFS = [
      "preprint, 2023. arXiv:2308.12966."),
     ("yin2023mmllmsurvey",
      "Yin S, Fu C, Zhao S, et al. A survey on multimodal large language "
-     "models. arXiv preprint, 2023. arXiv:2306.13549."),
+     "models. National Science Review, 2024, 11(12): nwae403. "
+     "arXiv:2306.13549. doi:10.1093/nsr/nwae403."),
     ("goyal2017vqav2",
      "Goyal Y, Khot T, Summers-Stay D, Batra D, Parikh D. Making the V in "
      "VQA matter: Elevating the role of image understanding in visual "
      "question answering. In: Proceedings of the IEEE Conference on Computer "
-     "Vision and Pattern Recognition (CVPR), 2017: 6904-6913."),
+     "Vision and Pattern Recognition (CVPR), 2017: 6325-6334. "
+     "doi:10.1109/CVPR.2017.670."),
     ("marino2019okvqa",
      "Marino K, Rastegari M, Farhadi A, Mottaghi R. OK-VQA: A visual "
      "question answering benchmark requiring external knowledge. In: "
      "Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern "
-     "Recognition (CVPR), 2019: 3195-3204."),
+     "Recognition (CVPR), 2019: 3190-3199. "
+     "doi:10.1109/CVPR.2019.00331."),
     ("hudson2019gqa",
      "Hudson D A, Manning C D. GQA: A new dataset for real-world visual "
      "reasoning and compositional question answering. In: Proceedings of the "
      "IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR), "
-     "2019: 6700-6709."),
+     "2019: 6693-6702. doi:10.1109/CVPR.2019.00686."),
     ("loshchilov2019adamw",
      "Loshchilov I, Hutter F. Decoupled weight decay regularization. In: "
      "International Conference on Learning Representations (ICLR), 2019. "
@@ -157,10 +169,10 @@ REFS = [
      "Smith L N, Topin N. Super-convergence: Very fast training of neural "
      "networks using large learning rates. In: Artificial Intelligence and "
      "Machine Learning for Multi-Domain Operations Applications, SPIE, 2019. "
-     "arXiv:1708.07120."),
+     "arXiv:1708.07120. doi:10.1117/12.2520589."),
     ("efron1993bootstrap",
      "Efron B, Tibshirani R J. An Introduction to the Bootstrap. New York: "
-     "Chapman and Hall, 1993."),
+     "Chapman and Hall, 1993. doi:10.1007/978-1-4899-4541-9."),
     ("ba2016layernorm",
      "Ba J L, Kiros J R, Hinton G E. Layer normalization. arXiv preprint, "
      "2016. arXiv:1607.06450."),

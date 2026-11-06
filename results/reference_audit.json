@@ -1,0 +1,686 @@
+{
+  "radford2021clip": {
+    "key": "radford2021clip",
+    "cited_years": [
+      2021
+    ],
+    "venue_claims": [
+      "ICML"
+    ],
+    "arxiv": "2103.00020",
+    "doi": "",
+    "parsed_title": "Learning transferable visual  models from natural language supervision",
+    "urls": [],
+    "url_status": {},
+    "arxiv_title": "Learning Transferable Visual Models From Natural Language Supervision",
+    "arxiv_published": "2021-02-26",
+    "arxiv_comment": "",
+    "problems": []
+  },
+  "dosovitskiy2021vit": {
+    "key": "dosovitskiy2021vit",
+    "cited_years": [
+      2021,
+      2010
+    ],
+    "venue_claims": [
+      "ICLR"
+    ],
+    "arxiv": "2010.11929",
+    "doi": "",
+    "parsed_title": "An image is worth 16x16  words: Transformers for image recognition at scale",
+    "urls": [],
+    "url_status": {},
+    "arxiv_title": "An Image is Worth 16x16 Words: Transformers for Image Recognition at Scale",
+    "arxiv_published": "2020-10-22",
+    "arxiv_comment": "Fine-tuning code and pre-trained models are available at https://github.com/google-research/vision_transformer. ICLR camera-ready version with 2 small modifications: 1) Added a discussion of CLS vs GAP classifier in the appendix, 2) Fixed an error in exaFLOPs computation in Figure 5 and Table 6 (relative performance of models is basically not affected)",
+    "problems": []
+  },
+  "vaswani2017attention": {
+    "key": "vaswani2017attention",
+    "cited_years": [
+      2017
+    ],
+    "venue_claims": [
+      "NeurIPS"
+    ],
+    "arxiv": "1706.03762",
+    "doi": "",
+    "parsed_title": "Attention is all you need",
+    "urls": [],
+    "url_status": {},
+    "arxiv_title": "Attention Is All You Need",
+    "arxiv_published": "2017-06-12",
+    "arxiv_comment": "15 pages, 5 figures",
+    "problems": []
+  },
+  "touvron2023llama2": {
+    "key": "touvron2023llama2",
+    "cited_years": [
+      2023
+    ],
+    "venue_claims": [],
+    "arxiv": "2307.09288",
+    "doi": "",
+    "parsed_title": "Llama 2: Open foundation and  fine-tuned chat models",
+    "urls": [],
+    "url_status": {},
+    "arxiv_title": "Llama 2: Open Foundation and Fine-Tuned Chat Models",
+    "arxiv_published": "2023-07-18",
+    "arxiv_comment": "",
+    "problems": []
+  },
+  "zhang2024tinyllama": {
+    "key": "zhang2024tinyllama",
+    "cited_years": [
+      2024
+    ],
+    "venue_claims": [],
+    "arxiv": "2401.02385",
+    "doi": "",
+    "parsed_title": "TinyLlama: An open-source small  language model",
+    "urls": [],
+    "url_status": {},
+    "arxiv_title": "TinyLlama: An Open-Source Small Language Model",
+    "arxiv_published": "2024-01-04",
+    "arxiv_comment": "Technical Report",
+    "problems": []
+  },
+  "su2024roformer": {
+    "key": "su2024roformer",
+    "cited_years": [
+      2024,
+      2023
+    ],
+    "venue_claims": [
+      "Neurocomputing"
+    ],
+    "arxiv": "",
+    "doi": "10.1016/j.neucom.2023.127063",
+    "parsed_title": "RoFormer: Enhanced transformer with rotary  position embedding",
+    "urls": [],
+    "url_status": {},
+    "crossref_title": "RoFormer: Enhanced transformer with Rotary Position Embedding",
+    "crossref_container": "Neurocomputing",
+    "crossref_year": 2024,
+    "problems": []
+  },
+  "ainslie2023gqa": {
+    "key": "ainslie2023gqa",
+    "cited_years": [
+      2023,
+      2023,
+      2023
+    ],
+    "venue_claims": [
+      "EMNLP"
+    ],
+    "arxiv": "2305.13245",
+    "doi": "10.18653/v1/2023.emnlp-main.298",
+    "parsed_title": "GQA: Training generalized  multi-query transformer models from multi-head checkpoints",
+    "urls": [],
+    "url_status": {},
+    "arxiv_title": "GQA: Training Generalized Multi-Query Transformer Models from Multi-Head Checkpoints",
+    "arxiv_published": "2023-05-22",
+    "arxiv_comment": "Accepted at EMNLP 2023. Added to related work",
+    "crossref_title": "GQA: Training Generalized Multi-Query Transformer Models from Multi-Head Checkpoints",
+    "crossref_container": "Proceedings of the 2023 Conference on Empirical Methods in Natural Language Processing",
+    "crossref_year": 2023,
+    "problems": []
+  },
+  "hu2022lora": {
+    "key": "hu2022lora",
+    "cited_years": [
+      2022
+    ],
+    "venue_claims": [
+      "ICLR"
+    ],
+    "arxiv": "2106.09685",
+    "doi": "",
+    "parsed_title": "LoRA: Low-rank adaptation of large  language models",
+    "urls": [],
+    "url_status": {},
+    "arxiv_title": "LoRA: Low-Rank Adaptation of Large Language Models",
+    "arxiv_published": "2021-06-17",
+    "arxiv_comment": "Draft V2 includes better baselines, experiments on GLUE, and more on adapter latency",
+    "problems": []
+  },
+  "li2021prefix": {
+    "key": "li2021prefix",
+    "cited_years": [
+      2021,
+      2021
+    ],
+    "venue_claims": [
+      "ACL"
+    ],
+    "arxiv": "2101.00190",
+    "doi": "10.18653/v1/2021.acl-long.353",
+    "parsed_title": "Prefix-tuning: Optimizing continuous prompts for  generation",
+    "urls": [],
+    "url_status": {},
+    "arxiv_title": "Prefix-Tuning: Optimizing Continuous Prompts for Generation",
+    "arxiv_published": "2021-01-01",
+    "arxiv_comment": "",
+    "crossref_title": "Prefix-Tuning: Optimizing Continuous Prompts for Generation",
+    "crossref_container": "Proceedings of the 59th Annual Meeting of the Association for Computational Linguistics and the 11th International Joint Conference on Natural Language Processing (Volume 1: Long Papers)",
+    "crossref_year": 2021,
+    "problems": []
+  },
+  "liu2022ptuningv2": {
+    "key": "liu2022ptuningv2",
+    "cited_years": [
+      2021
+    ],
+    "venue_claims": [],
+    "arxiv": "2110.07602",
+    "doi": "",
+    "parsed_title": "P-Tuning v2: Prompt tuning can be comparable  to fine-tuning universally across scales and tasks",
+    "urls": [],
+    "url_status": {},
+    "arxiv_title": "P-Tuning v2: Prompt Tuning Can Be Comparable to Fine-tuning Universally Across Scales and Tasks",
+    "arxiv_published": "2021-10-14",
+    "arxiv_comment": "Proceedings of the 60th Annual Meeting of the Association of Computational Linguistics, 2022",
+    "problems": []
+  },
+  "zhang2024llamaadapter": {
+    "key": "zhang2024llamaadapter",
+    "cited_years": [
+      2024
+    ],
+    "venue_claims": [
+      "ICLR"
+    ],
+    "arxiv": "2303.16199",
+    "doi": "",
+    "parsed_title": "LLaMA-Adapter: Efficient fine-tuning of  language models with zero-init attention",
+    "urls": [],
+    "url_status": {},
+    "arxiv_title": "LLaMA-Adapter: Efficient Fine-tuning of Language Models with Zero-init Attention",
+    "arxiv_published": "2023-03-28",
+    "arxiv_comment": "Accepted by ICLR 2024. Code is available at https://github.com/OpenGVLab/LLaMA-Adapter",
+    "problems": []
+  },
+  "jia2022vpt": {
+    "key": "jia2022vpt",
+    "cited_years": [
+      2022
+    ],
+    "venue_claims": [
+      "ECCV"
+    ],
+    "arxiv": "2203.12119",
+    "doi": "10.1007/978-3-031-19827-4_41",
+    "parsed_title": "Visual prompt tuning",
+    "urls": [],
+    "url_status": {},
+    "arxiv_title": "Visual Prompt Tuning",
+    "arxiv_published": "2022-03-23",
+    "arxiv_comment": "ECCV2022",
+    "crossref_title": "Visual Prompt Tuning",
+    "crossref_container": "Lecture Notes in Computer Science",
+    "crossref_year": 2022,
+    "problems": []
+  },
+  "zhou2022coop": {
+    "key": "zhou2022coop",
+    "cited_years": [
+      2022
+    ],
+    "venue_claims": [],
+    "arxiv": "",
+    "doi": "10.1007/s11263-022-01653-1",
+    "parsed_title": "Learning to prompt for vision-language  models",
+    "urls": [],
+    "url_status": {},
+    "crossref_title": "Learning to Prompt for Vision-Language Models",
+    "crossref_container": "International Journal of Computer Vision",
+    "crossref_year": 2022,
+    "problems": []
+  },
+  "liu2021swin": {
+    "key": "liu2021swin",
+    "cited_years": [
+      2021,
+      2021
+    ],
+    "venue_claims": [
+      "ICCV"
+    ],
+    "arxiv": "2103.14030",
+    "doi": "10.1109/ICCV48922.2021.00986",
+    "parsed_title": "Swin Transformer: Hierarchical vision  transformer using shifted windows",
+    "urls": [],
+    "url_status": {},
+    "arxiv_title": "Swin Transformer: Hierarchical Vision Transformer using Shifted Windows",
+    "arxiv_published": "2021-03-25",
+    "arxiv_comment": "",
+    "crossref_title": "Swin Transformer: Hierarchical Vision Transformer using Shifted Windows",
+    "crossref_container": "2021 IEEE/CVF International Conference on Computer Vision (ICCV)",
+    "crossref_year": 2021,
+    "problems": []
+  },
+  "dong2022cswin": {
+    "key": "dong2022cswin",
+    "cited_years": [
+      2022,
+      2022
+    ],
+    "venue_claims": [
+      "CVPR"
+    ],
+    "arxiv": "2107.00652",
+    "doi": "10.1109/CVPR52688.2022.01181",
+    "parsed_title": "CSWin Transformer: A general vision  transformer backbone with cross-shaped windows",
+    "urls": [],
+    "url_status": {},
+    "arxiv_title": "CSWin Transformer: A General Vision Transformer Backbone with Cross-Shaped Windows",
+    "arxiv_published": "2021-07-01",
+    "arxiv_comment": "",
+    "crossref_title": "CSWin Transformer: A General Vision Transformer Backbone with Cross-Shaped Windows",
+    "crossref_container": "2022 IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR)",
+    "crossref_year": 2022,
+    "problems": []
+  },
+  "xiao2024streamingllm": {
+    "key": "xiao2024streamingllm",
+    "cited_years": [
+      2024
+    ],
+    "venue_claims": [
+      "ICLR"
+    ],
+    "arxiv": "2309.17453",
+    "doi": "",
+    "parsed_title": "Efficient streaming language  models with attention sinks",
+    "urls": [],
+    "url_status": {},
+    "arxiv_title": "Efficient Streaming Language Models with Attention Sinks",
+    "arxiv_published": "2023-09-29",
+    "arxiv_comment": "ICLR 2024",
+    "problems": []
+  },
+  "yao2025cacheblend": {
+    "key": "yao2025cacheblend",
+    "cited_years": [
+      2025
+    ],
+    "venue_claims": [
+      "EuroSys"
+    ],
+    "arxiv": "",
+    "doi": "10.1145/3689031.3696098",
+    "parsed_title": "CacheBlend: Fast large language model  serving for RAG with cached knowledge fusion",
+    "urls": [],
+    "url_status": {},
+    "crossref_title": "CacheBlend: Fast Large Language Model Serving for RAG with Cached Knowledge Fusion",
+    "crossref_container": "Proceedings of the Twentieth European Conference on Computer Systems",
+    "crossref_year": 2025,
+    "problems": []
+  },
+  "li2024kvsurvey": {
+    "key": "li2024kvsurvey",
+    "cited_years": [
+      2024
+    ],
+    "venue_claims": [],
+    "arxiv": "2412.19442",
+    "doi": "",
+    "parsed_title": "A survey on large language model  acceleration based on KV cache management",
+    "urls": [],
+    "url_status": {},
+    "arxiv_title": "A Survey on Large Language Model Acceleration based on KV Cache Management",
+    "arxiv_published": "2024-12-27",
+    "arxiv_comment": "Accepted to TMLR 2025. The revised version incorporates more papers and has been further polished",
+    "problems": []
+  },
+  "zhou2024dynamickv": {
+    "key": "zhou2024dynamickv",
+    "cited_years": [
+      2025,
+      2025
+    ],
+    "venue_claims": [
+      "EMNLP",
+      "Findings"
+    ],
+    "arxiv": "",
+    "doi": "10.18653/v1/2025.findings-emnlp.426",
+    "parsed_title": "DynamicKV: Task-aware adaptive KV cache  compression for long context LLMs",
+    "urls": [],
+    "url_status": {},
+    "crossref_title": "DynamicKV: Task-Aware Adaptive KV Cache Compression for Long Context LLMs",
+    "crossref_container": "Findings of the Association for Computational Linguistics: EMNLP 2025",
+    "crossref_year": 2025,
+    "problems": []
+  },
+  "beltagy2020longformer": {
+    "key": "beltagy2020longformer",
+    "cited_years": [
+      2020,
+      2004
+    ],
+    "venue_claims": [],
+    "arxiv": "2004.05150",
+    "doi": "",
+    "parsed_title": "Longformer: The long-document  transformer",
+    "urls": [],
+    "url_status": {},
+    "arxiv_title": "Longformer: The Long-Document Transformer",
+    "arxiv_published": "2020-04-10",
+    "arxiv_comment": "Version 2 introduces the Longformer-Encoder-Decoder (LED) model",
+    "problems": []
+  },
+  "alayrac2022flamingo": {
+    "key": "alayrac2022flamingo",
+    "cited_years": [
+      2022
+    ],
+    "venue_claims": [
+      "NeurIPS"
+    ],
+    "arxiv": "2204.14198",
+    "doi": "",
+    "parsed_title": "Flamingo: A visual language  model for few-shot learning",
+    "urls": [],
+    "url_status": {},
+    "arxiv_title": "Flamingo: a Visual Language Model for Few-Shot Learning",
+    "arxiv_published": "2022-04-29",
+    "arxiv_comment": "54 pages. In Proceedings of Neural Information Processing Systems (NeurIPS) 2022",
+    "problems": []
+  },
+  "tsimpoukelli2021frozen": {
+    "key": "tsimpoukelli2021frozen",
+    "cited_years": [
+      2021
+    ],
+    "venue_claims": [
+      "NeurIPS"
+    ],
+    "arxiv": "2106.13884",
+    "doi": "",
+    "parsed_title": "Multimodal few-shot learning  with frozen language models",
+    "urls": [],
+    "url_status": {},
+    "arxiv_title": "Multimodal Few-Shot Learning with Frozen Language Models",
+    "arxiv_published": "2021-06-25",
+    "arxiv_comment": "",
+    "problems": []
+  },
+  "li2023blip2": {
+    "key": "li2023blip2",
+    "cited_years": [
+      2023
+    ],
+    "venue_claims": [
+      "ICML"
+    ],
+    "arxiv": "2301.12597",
+    "doi": "",
+    "parsed_title": "BLIP-2: Bootstrapping language-image  pre-training with frozen image encoders and large language models",
+    "urls": [],
+    "url_status": {},
+    "arxiv_title": "BLIP-2: Bootstrapping Language-Image Pre-training with Frozen Image Encoders and Large Language Models",
+    "arxiv_published": "2023-01-30",
+    "arxiv_comment": "",
+    "problems": []
+  },
+  "liu2023llava": {
+    "key": "liu2023llava",
+    "cited_years": [
+      2023
+    ],
+    "venue_claims": [
+      "NeurIPS"
+    ],
+    "arxiv": "2304.08485",
+    "doi": "",
+    "parsed_title": "Visual instruction tuning",
+    "urls": [],
+    "url_status": {},
+    "arxiv_title": "Visual Instruction Tuning",
+    "arxiv_published": "2023-04-17",
+    "arxiv_comment": "NeurIPS 2023 Oral; project page: https://llava-vl.github.io/",
+    "problems": []
+  },
+  "liu2024llava15": {
+    "key": "liu2024llava15",
+    "cited_years": [
+      2024,
+      2024
+    ],
+    "venue_claims": [
+      "CVPR"
+    ],
+    "arxiv": "2310.03744",
+    "doi": "10.1109/CVPR52733.2024.02484",
+    "parsed_title": "Improved baselines with visual instruction  tuning",
+    "urls": [],
+    "url_status": {},
+    "arxiv_title": "Improved Baselines with Visual Instruction Tuning",
+    "arxiv_published": "2023-10-05",
+    "arxiv_comment": "Camera ready, CVPR 2024 (highlight). LLaVA project page: https://llava-vl.github.io",
+    "crossref_title": "Improved Baselines with Visual Instruction Tuning",
+    "crossref_container": "2024 IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR)",
+    "crossref_year": 2024,
+    "problems": []
+  },
+  "liu2024llavanext": {
+    "key": "liu2024llavanext",
+    "cited_years": [
+      2024,
+      2024
+    ],
+    "venue_claims": [],
+    "arxiv": "",
+    "doi": "",
+    "parsed_title": "LLaVA-NeXT: Improved reasoning, OCR, and  world knowledge",
+    "urls": [
+      "https://llava-vl.github.io/blog/2024-01-30-llava-next/"
+    ],
+    "url_status": {
+      "https://llava-vl.github.io/blog/2024-01-30-llava-next/": 200
+    },
+    "problems": []
+  },
+  "zhu2024minigpt4": {
+    "key": "zhu2024minigpt4",
+    "cited_years": [
+      2024
+    ],
+    "venue_claims": [
+      "ICLR"
+    ],
+    "arxiv": "2304.10592",
+    "doi": "",
+    "parsed_title": "MiniGPT-4: Enhancing  vision-language understanding with advanced large language models",
+    "urls": [],
+    "url_status": {},
+    "arxiv_title": "MiniGPT-4: Enhancing Vision-Language Understanding with Advanced Large Language Models",
+    "arxiv_published": "2023-04-20",
+    "arxiv_comment": "Project Website: https://minigpt-4.github.io/; Code, Pretrained Model, and Dataset: https://github.com/Vision-CAIR/MiniGPT-4; Deyao Zhu and Jun Chen contributed equally to this work",
+    "problems": []
+  },
+  "dai2023instructblip": {
+    "key": "dai2023instructblip",
+    "cited_years": [
+      2023
+    ],
+    "venue_claims": [
+      "NeurIPS"
+    ],
+    "arxiv": "2305.06500",
+    "doi": "",
+    "parsed_title": "InstructBLIP: Towards general-purpose  vision-language models with instruction tuning",
+    "urls": [],
+    "url_status": {},
+    "arxiv_title": "InstructBLIP: Towards General-purpose Vision-Language Models with Instruction Tuning",
+    "arxiv_published": "2023-05-11",
+    "arxiv_comment": "preprint",
+    "problems": []
+  },
+  "bai2023qwenvl": {
+    "key": "bai2023qwenvl",
+    "cited_years": [
+      2023
+    ],
+    "venue_claims": [],
+    "arxiv": "2308.12966",
+    "doi": "",
+    "parsed_title": "Qwen-VL: A versatile vision-language  model for understanding, localization, text reading, and beyond",
+    "urls": [],
+    "url_status": {},
+    "arxiv_title": "Qwen-VL: A Versatile Vision-Language Model for Understanding, Localization, Text Reading, and Beyond",
+    "arxiv_published": "2023-08-24",
+    "arxiv_comment": "Code, demo and models are available at https://github.com/QwenLM/Qwen-VL",
+    "problems": []
+  },
+  "yin2023mmllmsurvey": {
+    "key": "yin2023mmllmsurvey",
+    "cited_years": [
+      2024
+    ],
+    "venue_claims": [],
+    "arxiv": "2306.13549",
+    "doi": "10.1093/nsr/nwae403",
+    "parsed_title": "A survey on multimodal large language  models",
+    "urls": [],
+    "url_status": {},
+    "arxiv_title": "A Survey on Multimodal Large Language Models",
+    "arxiv_published": "2023-06-23",
+    "arxiv_comment": "Accepted for publication in National Science Review. Project page:https://github.com/BradyFU/Awesome-Multimodal-Large-Language-Models",
+    "crossref_title": "A survey on multimodal large language models",
+    "crossref_container": "National Science Review",
+    "crossref_year": 2024,
+    "problems": []
+  },
+  "goyal2017vqav2": {
+    "key": "goyal2017vqav2",
+    "cited_years": [
+      2017,
+      2017
+    ],
+    "venue_claims": [
+      "CVPR"
+    ],
+    "arxiv": "",
+    "doi": "10.1109/CVPR.2017.670",
+    "parsed_title": "Making the V in  VQA matter: Elevating the role of image understanding in visual  question answering",
+    "urls": [],
+    "url_status": {},
+    "crossref_title": "Making the V in VQA Matter: Elevating the Role of Image Understanding in Visual Question Answering",
+    "crossref_container": "2017 IEEE Conference on Computer Vision and Pattern Recognition (CVPR)",
+    "crossref_year": 2017,
+    "problems": []
+  },
+  "marino2019okvqa": {
+    "key": "marino2019okvqa",
+    "cited_years": [
+      2019,
+      2019
+    ],
+    "venue_claims": [
+      "CVPR"
+    ],
+    "arxiv": "",
+    "doi": "10.1109/CVPR.2019.00331",
+    "parsed_title": "OK-VQA: A visual  question answering benchmark requiring external knowledge",
+    "urls": [],
+    "url_status": {},
+    "crossref_title": "OK-VQA: A Visual Question Answering Benchmark Requiring External Knowledge",
+    "crossref_container": "2019 IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR)",
+    "crossref_year": 2019,
+    "problems": []
+  },
+  "hudson2019gqa": {
+    "key": "hudson2019gqa",
+    "cited_years": [
+      2019,
+      2019
+    ],
+    "venue_claims": [
+      "CVPR"
+    ],
+    "arxiv": "",
+    "doi": "10.1109/CVPR.2019.00686",
+    "parsed_title": "GQA: A new dataset for real-world visual  reasoning and compositional question answering",
+    "urls": [],
+    "url_status": {},
+    "crossref_title": "GQA: A New Dataset for Real-World Visual Reasoning and Compositional Question Answering",
+    "crossref_container": "2019 IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR)",
+    "crossref_year": 2019,
+    "problems": []
+  },
+  "loshchilov2019adamw": {
+    "key": "loshchilov2019adamw",
+    "cited_years": [
+      2019
+    ],
+    "venue_claims": [
+      "ICLR"
+    ],
+    "arxiv": "1711.05101",
+    "doi": "",
+    "parsed_title": "Decoupled weight decay regularization",
+    "urls": [],
+    "url_status": {},
+    "arxiv_title": "Decoupled Weight Decay Regularization",
+    "arxiv_published": "2017-11-14",
+    "arxiv_comment": "Published as a conference paper at ICLR 2019",
+    "problems": []
+  },
+  "smith2019superconvergence": {
+    "key": "smith2019superconvergence",
+    "cited_years": [
+      2019
+    ],
+    "venue_claims": [
+      "SPIE"
+    ],
+    "arxiv": "1708.07120",
+    "doi": "10.1117/12.2520589",
+    "parsed_title": "Super-convergence: Very fast training of neural  networks using large learning rates",
+    "urls": [],
+    "url_status": {},
+    "arxiv_title": "Super-Convergence: Very Fast Training of Neural Networks Using Large Learning Rates",
+    "arxiv_published": "2017-08-23",
+    "arxiv_comment": "This paper was significantly revised to show super-convergence as a general fast training methodology",
+    "crossref_title": "Super-convergence: very fast training of neural networks using large learning rates",
+    "crossref_container": "Artificial Intelligence and Machine Learning for Multi-Domain Operations Applications",
+    "crossref_year": 2019,
+    "problems": []
+  },
+  "efron1993bootstrap": {
+    "key": "efron1993bootstrap",
+    "cited_years": [
+      1993
+    ],
+    "venue_claims": [],
+    "arxiv": "",
+    "doi": "10.1007/978-1-4899-4541-9",
+    "parsed_title": "An Introduction to the Bootstrap",
+    "urls": [],
+    "url_status": {},
+    "crossref_title": "An Introduction to the Bootstrap",
+    "crossref_container": "",
+    "crossref_year": 1993,
+    "problems": []
+  },
+  "ba2016layernorm": {
+    "key": "ba2016layernorm",
+    "cited_years": [
+      2016
+    ],
+    "venue_claims": [],
+    "arxiv": "1607.06450",
+    "doi": "",
+    "parsed_title": "Layer normalization",
+    "urls": [],
+    "url_status": {},
+    "arxiv_title": "Layer Normalization",
+    "arxiv_published": "2016-07-21",
+    "arxiv_comment": "",
+    "problems": []
+  }
+}

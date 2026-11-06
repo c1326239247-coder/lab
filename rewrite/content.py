@@ -918,8 +918,10 @@ APPENDIX = [
       "determinism settings), model.py (all three systems), run_vqa.py (train and "
       "evaluate one configuration), the drivers run_main.py, run_ablations.py, "
       "run_seeds.py, run_capacity.py, run_cost.py and run_all.py, paired system "
-      "comparisons in compare_systems.py, the diagnostic probe probe.py, and the "
-      "summarisation scripts summarize.py and report.py;"),
+      "comparisons in compare_systems.py, the question-level split audit in "
+      "audit_splits.py, the bibliography check in verify_references.py, the "
+      "diagnostic probe probe.py, and the summarisation scripts summarize.py "
+      "and report.py;"),
 ("B", "results/: the raw JSON produced by each run, including the per-run "
       "configuration, the hardware report, the measured host KV statistics, the "
       "accuracies and bootstrap intervals under all control conditions, the "

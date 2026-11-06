@@ -105,6 +105,7 @@ is regenerated from `results/`.
 | `run_bridge_revision.py` | Rerun the affected results and finish the corrected comparison record |
 | `compare_systems.py` | Paired bootstrap differences between systems on the same questions |
 | `audit_splits.py` | Image-overlap audit for the question-level train/evaluation split |
+| `verify_references.py` | Checks every bibliography entry against arXiv, Crossref and OpenAlex |
 | `run_cost.py` | Inference latency and peak GPU memory per variant |
 | `probe.py` | Diagnostics on a trained checkpoint: per-layer attention mass on the visual prefix, per-layer host/bridged KV statistics |
 | `backbone_params.py` | Frozen-parameter accounting for CLIP and TinyLlama |
