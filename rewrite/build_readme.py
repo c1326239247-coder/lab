@@ -180,6 +180,9 @@ stages, if you want them separately:
 .\\.venv\\Scripts\\python.exe experiments\\summarize.py
 .\\.venv\\Scripts\\python.exe experiments\\report.py
 
+# bibliography audit against arXiv, Crossref and OpenAlex (needs network)
+.\\.venv\\Scripts\\python.exe experiments\\verify_references.py
+
 # manuscript and reviewer response in dist/, then regenerate this README
 .\\.venv\\Scripts\\python.exe rewrite\\annotate_figure1.py
 .\\.venv\\Scripts\\python.exe rewrite\\build_docx.py
@@ -255,9 +258,10 @@ Discussed in Sections 3.5, 5.1 and 5.2 of the paper:
 }}
 ```
 
-The archived release is citable at
-[10.5281/zenodo.23974490](https://doi.org/10.5281/zenodo.23974490), which
-deposits the GitHub zip-ball of the tag `revision-2026-11`.
+The archived releases are deposited in Zenodo and citable through the concept
+DOI [10.5281/zenodo.23974489](https://doi.org/10.5281/zenodo.23974489), which
+always resolves to the latest version. Each release is the GitHub zip-ball of
+its tag.
 
 ## License
 

@@ -103,11 +103,11 @@ def items():
         ("H2", "6. DOI-assigning code archive"),
         ("P", "Response: A dedicated Code Availability section now accompanies "
               "Data Availability. The corrected code, raw results, and "
-              "reproduction scripts are now public at "
-              "https://github.com/c1326239247-coder/lab under the tag "
-              "revision-2026-11. That release is now deposited in Zenodo and "
-              "citable at https://doi.org/10.5281/zenodo.23974490, and the "
-              "Code Availability section quotes the same DOI."),
+              "reproduction scripts are public at "
+              "https://github.com/c1326239247-coder/lab, and the archived "
+              "releases are deposited in Zenodo at "
+              "https://doi.org/10.5281/zenodo.23974489, which resolves to the "
+              "latest version. The Code Availability section quotes that DOI."),
         ("H1", "Reviewer 1"),
         ("H2", "1. Uniform prefix burden and DynamicKV"),
         ("P", "Response: Sections 2.3, 4.8, and 5.3 now cite and discuss "
@@ -184,7 +184,17 @@ def items():
               "partitions are {shared_images_vqa} in VQAv2, {shared_images_ok} "
               "in OK-VQA, and {shared_images_gqa} in GQA-spatial. The revised "
               "text therefore claims held-out-question evaluation, not "
-              "unseen-image generalisation."),
+              "unseen-image generalisation. We also audited the bibliography "
+              "entry by entry against the arXiv API, Crossref and OpenAlex, "
+              "and the check is now part of the repository "
+              "(experiments/verify_references.py, with the findings recorded "
+              "in results/reference_audit.json). It corrected five entries: "
+              "P-Tuning v2 is an arXiv preprint rather than an ACL 2022 paper; "
+              "the VQAv2, OK-VQA and GQA dataset papers now carry the page "
+              "ranges and DOIs from their IEEE records; the multimodal survey "
+              "is cited in its National Science Review journal version; and a "
+              "NeurIPS page range we could not verify was removed. Resolvable "
+              "DOIs were added to the remaining entries where they exist."),
     ]
     unresolved = []
     filled = []

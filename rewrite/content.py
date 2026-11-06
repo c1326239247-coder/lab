@@ -890,9 +890,10 @@ DATA_AVAILABILITY = (
 CODE_AVAILABILITY = (
     "The source code, configuration files, raw results, and experimental "
     "reproduction scripts supporting this study are publicly available at "
-    "https://github.com/c1326239247-coder/lab, tagged revision-2026-11. A "
-    "versioned archive is deposited in Zenodo and citable at "
-    "https://doi.org/10.5281/zenodo.23974490."
+    "https://github.com/c1326239247-coder/lab. The archived releases are "
+    "deposited in Zenodo and citable at "
+    "https://doi.org/10.5281/zenodo.23974489, which resolves to the latest "
+    "version."
 )
 
 COMPETING_INTERESTS = (
@@ -907,8 +908,8 @@ COMPETING_INTERESTS = (
 APPENDIX = [
 ("H1", "Appendix A  Code release"),
 ("P", "The implementation is released at "
-      "https://github.com/c1326239247-coder/lab under the tag "
-      "revision-2026-11 and contains:"),
+      "https://github.com/c1326239247-coder/lab, archived in Zenodo under the "
+      "DOI above, and contains:"),
 ("B", "cache_bridge_torch/: the PyTorch bridge modules (low-rank projection, "
       "2D-geometry-preserving attention, adaptive gate) and their unit tests;"),
 ("B", "cache_bridge/: a dependency-free NumPy reference implementation of the "
