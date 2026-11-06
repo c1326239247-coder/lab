@@ -1,3 +1,6 @@
+# noqa: SIZE_OK — this module is the manuscript prose itself: one ordered
+# document body that build_docx.py walks in order, so splitting the text
+# across modules would scatter the argument and risk reordering it.
 # -*- coding: utf-8 -*-
 """Body text of the revised manuscript.
 
