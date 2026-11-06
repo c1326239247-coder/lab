@@ -38,6 +38,12 @@ def load_font(size, bold=False):
 
 
 def main():
+    if not os.path.exists(SRC):
+        raise SystemExit("layout template missing: Figure 1 is cropped from "
+                         "the submission .docx, which is not shipped in the "
+                         "public repository. Place it at %s, or use the "
+                         "already-generated paper_figures/fig1_prefix_evaluated.png."
+                         % SRC)
     document = docx.Document(SRC)
     shape = list(document.inline_shapes)[0]
     rel_id = shape._inline.graphic.graphicData.pic.blipFill.blip.embed

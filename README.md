@@ -174,6 +174,13 @@ stages, if you want them separately:
 
 A single main configuration trains in about 5 minutes.
 
+`run_all.py` also rebuilds the Word manuscript, which needs the submission
+layout template at `rewrite/template.docx`. That file is not shipped in the
+public repository, so the two stages that read it are skipped and their
+generated outputs (`paper_figures/fig1_prefix_evaluated.png` and the built
+manuscript) are committed instead. Everything else, including the reviewer
+response letter, builds from `results/` alone.
+
 ## Tests
 
 No GPU and no checkpoint download required:

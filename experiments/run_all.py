@@ -45,8 +45,19 @@ STAGES = [
 ]
 
 
+TEMPLATE = os.path.join("rewrite", "template.docx")
+# These two stages read the Word layout template, which is not shipped in the
+# public repository; their outputs are committed, so skipping them is safe.
+TEMPLATE_STAGES = ("Figure 1 labels", "revised manuscript")
+
+
 def main():
     for name, cmd in STAGES:
+        if name in TEMPLATE_STAGES and not os.path.exists(TEMPLATE):
+            print("skipping %s: %s is not in the repository, and the "
+                  "generated output is already committed" % (name, TEMPLATE),
+                  flush=True)
+            continue
         print("########## %s ##########" % name, flush=True)
         start = time.time()
         result = subprocess.run(cmd)
